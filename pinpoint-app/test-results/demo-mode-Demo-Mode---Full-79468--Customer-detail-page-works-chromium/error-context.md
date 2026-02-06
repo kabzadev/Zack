@@ -1,0 +1,58 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: 🎮 DEMO MODE
+    - button "Exit" [ref=e6] [cursor=pointer]
+  - generic [ref=e8]:
+    - banner [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - button "‹" [ref=e12] [cursor=pointer]
+          - generic [ref=e13]:
+            - heading "Sarah Johnson" [level=1] [ref=e14]
+            - paragraph [ref=e15]: 3 estimates · $12,500 total
+        - generic [ref=e16]:
+          - button "✎" [ref=e17] [cursor=pointer]
+          - button "🗑" [ref=e18] [cursor=pointer]
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]: 🏠
+        - generic [ref=e22]: Homeowner
+        - generic [ref=e23]: Active
+      - generic [ref=e24]:
+        - heading "Contact Information" [level=2] [ref=e25]
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - generic [ref=e28]: 📞
+            - generic [ref=e29]:
+              - paragraph [ref=e30]: Phone
+              - paragraph [ref=e31]: (440) 555-0101
+          - generic [ref=e32]:
+            - generic [ref=e33]: ✉️
+            - generic [ref=e34]:
+              - paragraph [ref=e35]: Email
+              - paragraph [ref=e36]: sarah.j@email.com
+      - generic [ref=e37]:
+        - heading "Address" [level=2] [ref=e38]
+        - generic [ref=e39]:
+          - generic [ref=e40]: 📍
+          - generic [ref=e41]:
+            - paragraph [ref=e42]: 1234 Oak Street
+            - paragraph [ref=e43]: Westlake, OH 44145
+      - generic [ref=e44]:
+        - heading "Tags" [level=2] [ref=e45]
+        - generic [ref=e46]:
+          - generic [ref=e47]: "#Interior"
+          - generic [ref=e48]: "#Repeat Customer"
+      - generic [ref=e49]:
+        - heading "Notes" [level=2] [ref=e50]
+        - paragraph [ref=e51]: No notes added.
+      - generic [ref=e52]:
+        - heading "Estimates" [level=2] [ref=e53]
+        - generic [ref=e54]:
+          - generic [ref=e55]: 📋
+          - paragraph [ref=e56]: 3 estimates · $12,500 total
+          - button "+New Estimate" [ref=e57] [cursor=pointer]
+```

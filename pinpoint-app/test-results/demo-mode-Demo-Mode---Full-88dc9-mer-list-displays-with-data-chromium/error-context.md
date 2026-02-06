@@ -1,0 +1,142 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: 🎮 DEMO MODE
+    - button "Exit" [ref=e6] [cursor=pointer]
+  - generic [ref=e8]:
+    - banner [ref=e9]:
+      - generic [ref=e10]:
+        - button "‹" [ref=e11] [cursor=pointer]
+        - heading "Customers" [level=1] [ref=e13]
+        - generic [ref=e14]: "8"
+      - generic [ref=e15]:
+        - textbox "🔍 Search customers..." [ref=e17]:
+          - /placeholder: 🔍  Search customers...
+        - button "☰" [ref=e18] [cursor=pointer]
+    - generic [ref=e20]:
+      - generic [ref=e21] [cursor=pointer]:
+        - generic [ref=e23]: 🏠
+        - generic [ref=e24]:
+          - heading "Amanda Davis" [level=3] [ref=e26]
+          - generic [ref=e28]:
+            - generic [ref=e29]: Homeowner
+            - generic [ref=e30]: •
+            - generic [ref=e31]: Avon Lake
+          - generic [ref=e32]:
+            - generic [ref=e33]: "#Interior"
+            - generic [ref=e34]: "#Exterior"
+        - generic [ref=e35]:
+          - paragraph [ref=e36]: "0"
+          - paragraph [ref=e37]: estimates
+        - generic [ref=e38]: ›
+      - generic [ref=e39] [cursor=pointer]:
+        - generic [ref=e41]: 🏬
+        - generic [ref=e42]:
+          - heading "Emma Williams" [level=3] [ref=e44]
+          - generic [ref=e46]:
+            - generic [ref=e47]: Commercial
+            - generic [ref=e48]: •
+            - generic [ref=e49]: Lakewood
+          - generic [ref=e50]:
+            - generic [ref=e51]: "#Interior"
+            - generic [ref=e52]: "#Custom Colors"
+        - generic [ref=e53]:
+          - paragraph [ref=e54]: "1"
+          - paragraph [ref=e55]: estimates
+        - generic [ref=e56]: ›
+      - generic [ref=e57] [cursor=pointer]:
+        - generic [ref=e59]: 🏢
+        - generic [ref=e60]:
+          - heading "Jennifer Martinez" [level=3] [ref=e62]
+          - generic [ref=e64]:
+            - generic [ref=e65]: Property Mgr
+            - generic [ref=e66]: •
+            - generic [ref=e67]: Shaker Heights
+          - generic [ref=e68]:
+            - generic [ref=e69]: "#Interior"
+            - generic [ref=e70]: "#Commercial"
+            - generic [ref=e71]: "+1"
+        - generic [ref=e72]:
+          - paragraph [ref=e73]: "12"
+          - paragraph [ref=e74]: estimates
+        - generic [ref=e75]: ›
+      - generic [ref=e76] [cursor=pointer]:
+        - generic [ref=e78]: 🔨
+        - generic [ref=e79]:
+          - heading "David Rodriguez" [level=3] [ref=e81]
+          - generic [ref=e83]:
+            - generic [ref=e84]: Contractor
+            - generic [ref=e85]: •
+            - generic [ref=e86]: Cleveland
+          - generic [ref=e87]:
+            - generic [ref=e88]: "#Commercial"
+            - generic [ref=e89]: "#Referral"
+        - generic [ref=e90]:
+          - paragraph [ref=e91]: "5"
+          - paragraph [ref=e92]: estimates
+        - generic [ref=e93]: ›
+      - generic [ref=e94] [cursor=pointer]:
+        - generic [ref=e96]: 🏠
+        - generic [ref=e97]:
+          - heading "Sarah Johnson" [level=3] [ref=e99]
+          - generic [ref=e101]:
+            - generic [ref=e102]: Homeowner
+            - generic [ref=e103]: •
+            - generic [ref=e104]: Westlake
+          - generic [ref=e105]:
+            - generic [ref=e106]: "#Interior"
+            - generic [ref=e107]: "#Repeat Customer"
+        - generic [ref=e108]:
+          - paragraph [ref=e109]: "3"
+          - paragraph [ref=e110]: estimates
+        - generic [ref=e111]: ›
+      - generic [ref=e112] [cursor=pointer]:
+        - generic [ref=e114]: 🏢
+        - generic [ref=e115]:
+          - heading "Michael Chen" [level=3] [ref=e117]
+          - generic [ref=e119]:
+            - generic [ref=e120]: Property Mgr
+            - generic [ref=e121]: •
+            - generic [ref=e122]: Rocky River
+          - generic [ref=e123]:
+            - generic [ref=e124]: "#Commercial"
+            - generic [ref=e125]: "#Exterior"
+            - generic [ref=e126]: "+1"
+        - generic [ref=e127]:
+          - paragraph [ref=e128]: "8"
+          - paragraph [ref=e129]: estimates
+        - generic [ref=e130]: ›
+      - generic [ref=e131] [cursor=pointer]:
+        - generic [ref=e133]: 🏠
+        - generic [ref=e134]:
+          - heading "Robert Anderson" [level=3] [ref=e136]
+          - generic [ref=e138]:
+            - generic [ref=e139]: Homeowner
+            - generic [ref=e140]: •
+            - generic [ref=e141]: Bay Village
+          - generic [ref=e142]:
+            - generic [ref=e143]: "#Exterior"
+            - generic [ref=e144]: "#Insurance Claim"
+        - generic [ref=e145]:
+          - paragraph [ref=e146]: "2"
+          - paragraph [ref=e147]: estimates
+        - generic [ref=e148]: ›
+      - generic [ref=e149] [cursor=pointer]:
+        - generic [ref=e151]: 🔨
+        - generic [ref=e152]:
+          - heading "Thomas Wilson" [level=3] [ref=e154]
+          - generic [ref=e156]:
+            - generic [ref=e157]: Contractor
+            - generic [ref=e158]: •
+            - generic [ref=e159]: Parma
+          - generic [ref=e160]:
+            - generic [ref=e161]: "#Residential"
+            - generic [ref=e162]: "#Referral"
+        - generic [ref=e163]:
+          - paragraph [ref=e164]: "1"
+          - paragraph [ref=e165]: estimates
+        - generic [ref=e166]: ›
+    - button "+" [ref=e167] [cursor=pointer]
+```

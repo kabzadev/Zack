@@ -1,0 +1,111 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]: 🎮 DEMO MODE
+    - button "Exit" [ref=e6] [cursor=pointer]
+  - generic [ref=e8]:
+    - banner [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e12]: ◆
+        - generic [ref=e13]:
+          - heading "Pinpoint Painting" [level=1] [ref=e14]
+          - paragraph [ref=e15]: Professional Estimating
+        - button "↵" [ref=e16] [cursor=pointer]
+    - main [ref=e17]:
+      - generic [ref=e18]:
+        - heading "Hey Demo!" [level=2] [ref=e19]
+        - paragraph [ref=e20]: Ready to create some estimates?
+      - generic [ref=e21]:
+        - generic [ref=e22]:
+          - generic [ref=e25]: 👥
+          - paragraph [ref=e26]: "8"
+          - paragraph [ref=e27]: Customers
+        - generic [ref=e28]:
+          - generic [ref=e31]: 📋
+          - paragraph [ref=e32]: "5"
+          - paragraph [ref=e33]: Estimates
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - paragraph [ref=e37]: Total Estimate Value
+            - paragraph [ref=e38]: $20,388
+          - generic [ref=e40]: 💰
+        - generic [ref=e44]: 5 active customers
+      - generic [ref=e45]:
+        - heading "Quick Actions" [level=3] [ref=e46]
+        - generic [ref=e47]:
+          - button "+ New Customer Add a customer and create estimate ›" [ref=e48] [cursor=pointer]:
+            - generic [ref=e49]: +
+            - generic [ref=e50]:
+              - paragraph [ref=e51]: New Customer
+              - paragraph [ref=e52]: Add a customer and create estimate
+            - generic [ref=e53]: ›
+          - button "📋 View Customers Browse and manage customers ›" [ref=e54] [cursor=pointer]:
+            - generic [ref=e55]: 📋
+            - generic [ref=e56]:
+              - paragraph [ref=e57]: View Customers
+              - paragraph [ref=e58]: Browse and manage customers
+            - generic [ref=e59]: ›
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - heading "Recent Customers" [level=3] [ref=e62]
+          - button "See all →" [ref=e63] [cursor=pointer]
+        - generic [ref=e64]:
+          - generic [ref=e65] [cursor=pointer]:
+            - generic [ref=e67]: AD
+            - generic [ref=e68]:
+              - paragraph [ref=e69]: Amanda Davis
+              - paragraph [ref=e70]: Avon Lake, OH
+            - generic [ref=e71]:
+              - paragraph [ref=e72]: "0"
+              - paragraph [ref=e73]: estimates
+            - img [ref=e74]
+          - generic [ref=e76] [cursor=pointer]:
+            - generic [ref=e78]: EW
+            - generic [ref=e79]:
+              - paragraph [ref=e80]: Emma Williams
+              - paragraph [ref=e81]: Lakewood, OH
+            - generic [ref=e82]:
+              - paragraph [ref=e83]: "1"
+              - paragraph [ref=e84]: estimates
+            - img [ref=e85]
+          - generic [ref=e87] [cursor=pointer]:
+            - generic [ref=e89]: JM
+            - generic [ref=e90]:
+              - paragraph [ref=e91]: Jennifer Martinez
+              - paragraph [ref=e92]: Shaker Heights, OH
+            - generic [ref=e93]:
+              - paragraph [ref=e94]: "12"
+              - paragraph [ref=e95]: estimates
+            - img [ref=e96]
+          - generic [ref=e98] [cursor=pointer]:
+            - generic [ref=e100]: DR
+            - generic [ref=e101]:
+              - paragraph [ref=e102]: David Rodriguez
+              - paragraph [ref=e103]: Cleveland, OH
+            - generic [ref=e104]:
+              - paragraph [ref=e105]: "5"
+              - paragraph [ref=e106]: estimates
+            - img [ref=e107]
+          - generic [ref=e109] [cursor=pointer]:
+            - generic [ref=e111]: SJ
+            - generic [ref=e112]:
+              - paragraph [ref=e113]: Sarah Johnson
+              - paragraph [ref=e114]: Westlake, OH
+            - generic [ref=e115]:
+              - paragraph [ref=e116]: "3"
+              - paragraph [ref=e117]: estimates
+            - img [ref=e118]
+    - navigation [ref=e120]:
+      - button "Home" [ref=e121] [cursor=pointer]:
+        - img [ref=e122]
+        - generic [ref=e124]: Home
+      - button "Customers" [ref=e125] [cursor=pointer]:
+        - img [ref=e126]
+        - generic [ref=e128]: Customers
+      - button "Settings" [ref=e129] [cursor=pointer]:
+        - img [ref=e130]
+        - generic [ref=e133]: Settings
+```
