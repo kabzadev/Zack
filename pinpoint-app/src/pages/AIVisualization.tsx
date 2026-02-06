@@ -49,32 +49,36 @@ export const AIVisualization = () => {
 
     if (isLikelyInterior) {
       const z = colorZones[0];
-      return `Edit this room photo by repainting the walls with ${z.colorName} (Sherwin-Williams ${z.colorCode}, hex color ${z.colorHex}).
+      return `You are a professional interior paint visualization tool. Take this photo of a room and change ONLY the wall color to ${z.colorName} (${z.colorHex}).
 
-IMPORTANT INSTRUCTIONS:
-- Repaint ALL visible wall surfaces with the specified color
-- Keep the EXACT same photo — same angle, lighting, shadows, perspective  
-- Preserve ALL non-wall elements: furniture, flooring, ceiling, windows, doors, fixtures, decor
-- The paint should look realistic with proper light and shadow on the walls
-- Maintain wall textures and any architectural details
-- Do NOT change anything except the wall color
-- The result should look like a real photograph, not an illustration
-- Output a photorealistic edited version of the input photo`;
+CRITICAL RULES:
+1. IDENTIFY the walls first — they are the large flat vertical surfaces in the room
+2. CHANGE the color of ONLY those wall surfaces to ${z.colorHex}
+3. DO NOT apply a color filter or tint over the entire image
+4. DO NOT change: ceiling, floor, furniture, doors, windows, trim, baseboards, outlets, light fixtures, curtains, or any objects in the room
+5. The walls should show realistic paint coverage with natural light and shadow variation
+6. Keep the exact same camera angle, perspective, and composition
+7. The final image must look like a real photograph of the room with freshly painted walls
+8. Maintain wall texture — do not make walls look flat or artificially smooth
+
+OUTPUT: A photorealistic edited version of this photo where only the walls have been repainted.`;
     }
 
-    return `Edit this photo by repainting it with the following Sherwin-Williams paint colors. Apply each color ONLY to its designated area:
+    return `You are a professional paint visualization tool. Take this photo and repaint ONLY the specified areas with these Sherwin-Williams colors:
 
 ${colorList}
 
-IMPORTANT INSTRUCTIONS:
-- Repaint ONLY the designated areas with the specified colors
-- Keep the EXACT same photo — same angle, lighting, shadows, perspective
-- Preserve all non-painted elements: windows, furniture, flooring, landscaping, fixtures
-- Maintain surface textures (wood grain, siding lines, brick pattern, stucco, drywall)
-- The paint should look realistic with proper light and shadow
-- Do NOT change the structure or non-paint elements
-- The result should look like a real photograph, not an illustration or render
-- Output a photorealistic edited version of the input photo`;
+CRITICAL RULES:
+1. IDENTIFY each area (body/siding, trim, door, etc.) in the photo
+2. CHANGE the color of ONLY those specific areas — nothing else
+3. DO NOT apply a color filter or tint over the entire image  
+4. DO NOT change: windows, glass, landscaping, ground, sky, vehicles, fixtures, or any non-painted surfaces
+5. Paint should look realistic with proper light, shadow, and surface texture
+6. Maintain the exact same camera angle, perspective, and composition
+7. Keep wood grain on wood, siding lines on siding, brick pattern on brick
+8. The final image must look like a real photograph, not a rendering
+
+OUTPUT: A photorealistic edited version where only the designated areas have been repainted.`;
   }, []);
 
   const generateWithGemini = useCallback(async (imageSrc: string, colorZones: ColorZoneInfo[]) => {
@@ -123,7 +127,7 @@ IMPORTANT INSTRUCTIONS:
         ],
       }],
       generationConfig: {
-        responseModalities: ['TEXT', 'IMAGE'],
+        responseModalities: ['IMAGE'],
       },
     };
 
