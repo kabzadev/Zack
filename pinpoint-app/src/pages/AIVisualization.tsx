@@ -14,12 +14,9 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-// Gemini API — use backend proxy when available, fallback to direct
+// Gemini API — backend proxy only (API key is server-side)
 import { API_URL } from '../utils/api';
-const GEMINI_PROXY_URL = API_URL ? `${API_URL.replace('/api', '')}/api/gemini/generate` : '';
-const GEMINI_API_KEY = 'AIzaSyD4F5xs2nayiYdKJ1q3jqUdGt53Lla3AkA';
-const GEMINI_MODEL = 'nano-banana-pro-preview'; // Gemini 3 Pro — much better at selective image editing
-const GEMINI_DIRECT_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_PROXY_URL = API_URL ? `${API_URL.replace('/api', '')}/api/gemini/generate` : '/api/gemini/generate';
 
 interface ColorZoneInfo {
   id: string;
@@ -133,31 +130,13 @@ OUTPUT: A photorealistic edited version where only the designated areas have bee
 
     const startTime = Date.now();
 
-    // Try backend proxy first, fall back to direct API call
-    let response: Response;
-    if (GEMINI_PROXY_URL) {
-      try {
-        response = await fetch(GEMINI_PROXY_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        });
-        telemetry.color('gemini:via_proxy', { status: response.status });
-      } catch {
-        telemetry.color('gemini:proxy_failed_fallback_direct');
-        response = await fetch(GEMINI_DIRECT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        });
-      }
-    } else {
-      response = await fetch(GEMINI_DIRECT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-    }
+    // All requests go through backend proxy (API key is server-side only)
+    const response = await fetch(GEMINI_PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+    telemetry.color('gemini:via_proxy', { status: response.status });
 
     const elapsed = Date.now() - startTime;
     telemetry.color('gemini:response', { status: response.status, ok: response.ok, elapsedMs: elapsed });
