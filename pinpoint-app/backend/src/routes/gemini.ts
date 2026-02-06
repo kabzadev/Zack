@@ -21,7 +21,7 @@ router.post('/generate', async (req: Request, res: Response) => {
       body: JSON.stringify({ contents, generationConfig }),
     });
 
-    const data = await response.json();
+    const data = await response.json() as Record<string, any>;
 
     if (!response.ok) {
       console.error('Gemini API error:', data?.error?.message || response.status);

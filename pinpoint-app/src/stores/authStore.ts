@@ -27,20 +27,12 @@ interface AuthState {
   refreshToken: () => Promise<boolean>;
 }
 
-// Helpers
-const getApiUrl = () => {
-  if (window.location.hostname === '100.88.213.43') {
-    return 'http://100.88.213.43:3002/api';
-  }
-  return import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
-};
+import { API_URL } from '../utils/api';
 
 const isDemoMode = () => {
   return typeof window !== 'undefined' && 
     (localStorage.getItem('demoMode') === 'true' || window.location.search.includes('demo=true'));
 };
-
-const API_URL = getApiUrl();
 
 // Store
 export const useAuthStore = create<AuthState>()(

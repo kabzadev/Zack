@@ -34,15 +34,7 @@ interface AdminStats {
   suspended: number;
 }
 
-/* ─── Helpers ─── */
-const getApiUrl = () => {
-  if (window.location.hostname === '100.88.213.43') {
-    return 'http://100.88.213.43:3002/api';
-  }
-  return import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
-};
-
-const API = getApiUrl();
+import { API_URL as API } from '../utils/api';
 
 function timeAgo(dateStr?: string): string {
   if (!dateStr) return 'Never';

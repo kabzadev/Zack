@@ -84,15 +84,25 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     });
   }, []);
 
-  // Load previous conversation when resuming
+  // Load previous conversation when resuming — and auto-start
   useEffect(() => {
-    if (isOpen && draftId) {
+    if (!isOpen) return;
+    
+    if (draftId) {
       const draft = store.getDraftById(draftId);
       if (draft && draft.conversationHistory.length > 0) {
         setTranscript(draft.conversationHistory);
       }
       currentDraftIdRef.current = draftId;
       store.setActiveDraft(draftId);
+    }
+    
+    // Auto-start voice agent when panel opens (new or resume)
+    if (conversation.status !== 'connected') {
+      const timer = setTimeout(() => {
+        startConversation();
+      }, 500);
+      return () => clearTimeout(timer);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, draftId]);
@@ -655,9 +665,9 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
         sessionConfig.overrides = {
           agent: {
             prompt: {
-              prompt: `You are resuming an estimate conversation. Here is the current state:\n\n${context}`,
+              prompt: `You are the Pinpoint Painting estimator resuming a conversation. Here is the current state of this estimate:\n\n${context}\n\nIMPORTANT: Do NOT re-ask for information already collected. Pick up where you left off. Be brief.`,
             },
-            first_message: `Welcome back! Let me check where we left off on this estimate...`,
+            firstMessage: `Welcome back! Let me check where we left off...`,
           },
         };
       }

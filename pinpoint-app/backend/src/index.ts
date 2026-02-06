@@ -24,6 +24,7 @@ const allowedOrigins = [
   'http://100.88.213.43:5173',
   'http://100.88.213.43:4173',
   'http://100.88.213.43:3001',
+  'https://pinpoint-app.politemushroom-118533c3.eastus2.azurecontainerapps.io',
   process.env.FRONTEND_URL
 ].filter((o): o is string => !!o);
 

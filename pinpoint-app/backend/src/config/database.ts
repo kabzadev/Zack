@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 
 const DB_PATH = path.join(__dirname, '..', '..', 'pinpoint.db');
 
-const db = new Database(DB_PATH);
+const db: import('better-sqlite3').Database = new Database(DB_PATH);
 
 // Enable WAL mode for better performance
 db.pragma('journal_mode = WAL');
