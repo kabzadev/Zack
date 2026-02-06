@@ -15,6 +15,7 @@ import { AdminPanel } from './pages/AdminPanel';
 import { AdminUserManagement } from './pages/AdminUserManagement';
 import { Settings } from './pages/Settings';
 import { EstimateList } from './pages/EstimateList';
+import { ProductCatalog } from './pages/ProductCatalog';
 import { FloatingAssistant } from './components/FloatingAssistant';
 import { useAuthStore } from './stores/authStore';
 import { useEffect, useState } from 'react';
@@ -148,6 +149,10 @@ function AppContent() {
           <Route 
             path="/admin/users" 
             element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <AdminUserManagement /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/products" 
+            element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <ProductCatalog /> : <Navigate to="/login" replace />} 
           />
           <Route 
             path="/settings" 

@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useCustomerStore } from '../stores/customerStore';
 import { useEstimateStore } from '../stores/estimateStore';
 import { Layout, Card, StatCard, Badge } from '../components';
-import { Users, FileText, DollarSign, UserCheck, Plus, Mic, Camera, ChevronRight, LogOut } from 'lucide-react';
+import { Users, FileText, DollarSign, UserCheck, Plus, Mic, Camera, ChevronRight, LogOut, ShoppingBag } from 'lucide-react';
 
 export const Dashboard = () => {
   const navigate = useNavigate();
@@ -96,6 +96,19 @@ export const Dashboard = () => {
                 <div className="flex-1">
                   <p className="font-semibold text-white">Color Visualizer</p>
                   <p className="text-sm text-slate-400">See colors on your project</p>
+                </div>
+                <ChevronRight size={20} className="text-slate-600" />
+              </div>
+            </Card>
+
+            <Card variant="clickable" onClick={() => navigate('/products')}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/25">
+                  <ShoppingBag size={22} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-white">SW Products</p>
+                  <p className="text-sm text-slate-400">Paint catalog, tiers & pricing</p>
                 </div>
                 <ChevronRight size={20} className="text-slate-600" />
               </div>

@@ -15,6 +15,7 @@ const pageRoutes: Record<string, string> = {
   home: '/', dashboard: '/', customers: '/customers', estimates: '/estimates',
   'voice-estimate': '/voice-estimate', colors: '/colors', history: '/estimates',
   'photo-capture': '/photo-capture', visualizer: '/photo-capture', settings: '/settings',
+  products: '/products', 'paint products': '/products', catalog: '/products',
 };
 
 export const FloatingAssistant = () => {
