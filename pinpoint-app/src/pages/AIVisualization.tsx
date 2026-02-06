@@ -13,9 +13,10 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-// OpenAI API key — loaded from VITE_OPENAI_API_KEY env var
-// In production, this should go through a backend proxy
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
+// Google Gemini API — Nano Banana model for image generation
+const GEMINI_API_KEY = 'AIzaSyDlymSdlKlQcb7RcMhPMNH2jHK_ZTyp-pg';
+const GEMINI_MODEL = 'gemini-2.5-flash-image';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 interface ColorZoneInfo {
   id: string;
@@ -36,71 +37,109 @@ export const AIVisualization = () => {
   const [isSaved, setIsSaved] = useState(false);
 
   const buildPrompt = useCallback((colorZones: ColorZoneInfo[]): string => {
-    const colorList = colorZones.map(z => 
-      `${z.label}: ${z.colorName} (Sherwin-Williams ${z.colorCode}, hex ${z.colorHex})`
+    const colorList = colorZones.map(z =>
+      `- ${z.label}: ${z.colorName} (Sherwin-Williams ${z.colorCode}, hex color ${z.colorHex})`
     ).join('\n');
 
-    return `Repaint this house photo with the following Sherwin-Williams paint colors. Apply each color ONLY to its designated area. Keep all architectural details, landscaping, shadows, lighting, and surroundings exactly the same. The result should look like a realistic, professional photograph — not a render or illustration.
+    return `Edit this house photo by repainting it with the following Sherwin-Williams paint colors. Apply each color ONLY to its designated area:
 
-Color assignments:
 ${colorList}
 
-Requirements:
-- Apply colors realistically with proper shadows and highlights
-- Maintain all textures (wood grain, stucco, brick, siding, etc.)
-- Keep the exact same perspective, lighting, and composition
-- Preserve all non-painted elements (windows, roof, landscaping, sky, driveway)
-- The paint finish should look wet/fresh and professionally applied
-- Output should be photorealistic quality`;
+IMPORTANT INSTRUCTIONS:
+- Repaint ONLY the designated areas with the specified colors
+- Keep the EXACT same photo — same angle, lighting, shadows, perspective
+- Preserve all non-painted elements: windows, roof, landscaping, sky, driveway, walkways
+- Maintain surface textures (wood grain, siding lines, brick pattern, stucco)
+- The paint should look realistic with proper light and shadow
+- Do NOT change the architecture or structure of the house
+- The result should look like a real photograph, not an illustration or render
+- Output a photorealistic edited version of the input photo`;
   }, []);
 
-  const generateWithOpenAI = useCallback(async (imageSrc: string, colorZones: ColorZoneInfo[]) => {
+  const generateWithGemini = useCallback(async (imageSrc: string, colorZones: ColorZoneInfo[]) => {
     setProcessingStep('Sending to AI...');
-    
-    // Convert data URL to blob
-    const response = await fetch(imageSrc);
-    const imageBlob = await response.blob();
-    
-    // Resize if too large (OpenAI has limits)
-    const resizedBlob = await resizeImage(imageBlob, 1024);
-    
+
+    // Get the base64 image data (strip data URL prefix)
+    let base64Data: string;
+    let mimeType: string;
+
+    if (imageSrc.startsWith('data:')) {
+      const [header, data] = imageSrc.split(',');
+      base64Data = data;
+      mimeType = header.split(':')[1].split(';')[0];
+    } else {
+      // Fetch and convert
+      const response = await fetch(imageSrc);
+      const blob = await response.blob();
+      mimeType = blob.type;
+      base64Data = await blobToBase64(blob);
+    }
+
+    // Resize if very large to stay under API limits
+    if (base64Data.length > 4_000_000) {
+      const resized = await resizeImageBase64(imageSrc, 1024);
+      base64Data = resized.data;
+      mimeType = resized.mime;
+    }
+
     const prompt = buildPrompt(colorZones);
-    
+
     setProcessingStep('AI is painting your house...');
 
-    // Use OpenAI Images Edit API
-    const formData = new FormData();
-    formData.append('model', 'gpt-image-1');
-    formData.append('image', resizedBlob, 'house.png');
-    formData.append('prompt', prompt);
-    formData.append('size', '1024x1024');
-    formData.append('quality', 'high');
-
-    const apiResponse = await fetch('https://api.openai.com/v1/images/edits', {
+    const response = await fetch(GEMINI_URL, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            {
+              inlineData: {
+                mimeType,
+                data: base64Data,
+              },
+            },
+            { text: prompt },
+          ],
+        }],
+        generationConfig: {
+          responseModalities: ['TEXT', 'IMAGE'],
+        },
+      }),
     });
 
-    if (!apiResponse.ok) {
-      const errData = await apiResponse.json().catch(() => ({}));
-      throw new Error(errData?.error?.message || `API error: ${apiResponse.status}`);
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      throw new Error(errData?.error?.message || `API error: ${response.status}`);
     }
 
-    const data = await apiResponse.json();
-    
-    if (data.data?.[0]?.b64_json) {
-      return `data:image/png;base64,${data.data[0].b64_json}`;
-    } else if (data.data?.[0]?.url) {
-      return data.data[0].url;
+    const data = await response.json();
+
+    // Extract the generated image from response
+    const candidates = data.candidates || [];
+    for (const candidate of candidates) {
+      const parts = candidate.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          const mime = part.inlineData.mimeType || 'image/png';
+          return `data:${mime};base64,${part.inlineData.data}`;
+        }
+      }
     }
-    
+
+    // Check if there's a text-only response (model refused to generate image)
+    for (const candidate of candidates) {
+      const parts = candidate.content?.parts || [];
+      for (const part of parts) {
+        if (part.text) {
+          throw new Error(`AI responded with text only: "${part.text.slice(0, 200)}"`);
+        }
+      }
+    }
+
     throw new Error('No image returned from AI');
   }, [buildPrompt]);
 
-  // Fallback: enhanced CSS recoloring for when API is unavailable
+  // Fallback: CSS blend mode recoloring
   const generateFallbackRecolor = useCallback(async (imageSrc: string, colorZones: ColorZoneInfo[]): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -113,7 +152,6 @@ Requirements:
 
         ctx.drawImage(img, 0, 0);
 
-        // Use the body/primary color for the overlay
         const primaryColor = colorZones.find(z => z.id === 'body') || colorZones[0];
         if (primaryColor) {
           ctx.globalCompositeOperation = 'color';
@@ -138,34 +176,23 @@ Requirements:
     setError(null);
 
     try {
-      let result: string;
-
-      if (OPENAI_API_KEY) {
-        setProcessingStep('Connecting to AI...');
-        result = await generateWithOpenAI(image, colorZones);
-      } else {
-        setProcessingStep('Generating preview...');
-        // Simulate delay for fallback
-        await new Promise(r => setTimeout(r, 1500));
-        result = await generateFallbackRecolor(image, colorZones);
-      }
-
+      setProcessingStep('Connecting to AI...');
+      const result = await generateWithGemini(image, colorZones);
       setRecoloredImage(result);
       setIsProcessing(false);
     } catch (err) {
       console.error('AI visualization error:', err);
-      // Fall back to CSS blend
       setProcessingStep('Falling back to preview mode...');
       try {
         const fallback = await generateFallbackRecolor(image, colorZones);
         setRecoloredImage(fallback);
-        setError(`AI service unavailable — showing preview. (${err instanceof Error ? err.message : 'Unknown error'})`);
+        setError(`AI generation failed — showing color preview. (${err instanceof Error ? err.message : 'Unknown error'})`);
       } catch {
         setError('Failed to generate visualization. Please try again.');
       }
       setIsProcessing(false);
     }
-  }, [generateWithOpenAI, generateFallbackRecolor]);
+  }, [generateWithGemini, generateFallbackRecolor]);
 
   useEffect(() => {
     const image = sessionStorage.getItem('visualizer-image');
@@ -242,7 +269,7 @@ Requirements:
               </div>
               <div className="text-center">
                 <p className="text-white font-semibold text-lg">{processingStep}</p>
-                <p className="text-sm text-slate-500 mt-1">This may take 10-20 seconds</p>
+                <p className="text-sm text-slate-500 mt-1">This may take 10-30 seconds</p>
               </div>
               <div className="w-full max-w-[200px] h-1.5 rounded-full bg-slate-800 overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full animate-[shimmer_2s_ease-in-out_infinite]" style={{ width: '80%' }} />
@@ -264,14 +291,14 @@ Requirements:
         {/* Results */}
         {!isProcessing && recoloredImage && (
           <div className="space-y-5 animate-fade-in-up">
-            {/* Error banner (for fallback mode) */}
+            {/* Error/fallback banner */}
             {error && (
               <div className="flex items-start gap-3 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
                 <AlertTriangle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-xs text-amber-400 leading-relaxed">{error}</p>
                   <button onClick={handleRetry} className="mt-1.5 flex items-center gap-1 text-xs text-amber-300 font-semibold hover:text-amber-200">
-                    <RefreshCw size={12} /> Try again with AI
+                    <RefreshCw size={12} /> Try again
                   </button>
                 </div>
               </div>
@@ -343,8 +370,21 @@ Requirements:
   );
 };
 
-// Utility: resize image to max dimension while keeping aspect ratio
-async function resizeImage(blob: Blob, maxDim: number): Promise<Blob> {
+// Utility: convert Blob to base64 string (without data URL prefix)
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      resolve(result.split(',')[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Utility: resize image and return base64 + mime
+async function resizeImageBase64(src: string, maxDim: number): Promise<{ data: string; mime: string }> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -356,8 +396,11 @@ async function resizeImage(blob: Blob, maxDim: number): Promise<Blob> {
       canvas.height = h;
       const ctx = canvas.getContext('2d')!;
       ctx.drawImage(img, 0, 0, w, h);
-      canvas.toBlob(b => resolve(b || blob), 'image/png');
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      const [header, data] = dataUrl.split(',');
+      const mime = header.split(':')[1].split(';')[0];
+      resolve({ data, mime });
     };
-    img.src = URL.createObjectURL(blob);
+    img.src = src;
   });
 }
