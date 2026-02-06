@@ -55,6 +55,156 @@ interface CustomerState {
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
+// Demo data for testing UI
+const demoCustomers: Customer[] = [
+  {
+    id: 'demo-1',
+    firstName: 'Sarah',
+    lastName: 'Johnson',
+    email: 'sarah.j@email.com',
+    phone: '(440) 555-0101',
+    address: '1234 Oak Street',
+    city: 'Westlake',
+    state: 'OH',
+    zipCode: '44145',
+    type: 'homeowner',
+    status: 'active',
+    tags: ['Interior', 'Repeat Customer'],
+    estimateCount: 3,
+    totalEstimateValue: 12500,
+    createdAt: '2025-01-15T10:00:00Z',
+    updatedAt: '2025-02-01T14:30:00Z'
+  },
+  {
+    id: 'demo-2',
+    firstName: 'Michael',
+    lastName: 'Chen',
+    email: 'mchen@riverview.com',
+    phone: '(440) 555-0102',
+    address: '5000 Riverview Drive',
+    city: 'Rocky River',
+    state: 'OH',
+    zipCode: '44116',
+    notes: 'Property manager for 12 buildings',
+    type: 'property-manager',
+    status: 'active',
+    tags: ['Commercial', 'Exterior', 'HOA Project'],
+    estimateCount: 8,
+    totalEstimateValue: 45000,
+    createdAt: '2024-11-20T09:00:00Z',
+    updatedAt: '2025-01-28T16:00:00Z'
+  },
+  {
+    id: 'demo-3',
+    firstName: 'David',
+    lastName: 'Rodriguez',
+    email: 'dave.r@buildright.com',
+    phone: '(440) 555-0103',
+    address: '892 Industrial Parkway',
+    city: 'Cleveland',
+    state: 'OH',
+    zipCode: '44109',
+    type: 'contractor',
+    status: 'active',
+    tags: ['Commercial', 'Referral'],
+    estimateCount: 5,
+    totalEstimateValue: 28000,
+    createdAt: '2024-12-05T11:00:00Z',
+    updatedAt: '2025-02-03T10:00:00Z'
+  },
+  {
+    id: 'demo-4',
+    firstName: 'Emma',
+    lastName: 'Williams',
+    email: 'emma.w@lakewoodliving.com',
+    phone: '(440) 555-0104',
+    address: '2000 Lake Avenue',
+    city: 'Lakewood',
+    state: 'OH',
+    zipCode: '44107',
+    type: 'commercial',
+    status: 'prospect',
+    tags: ['Interior', 'Custom Colors'],
+    estimateCount: 1,
+    totalEstimateValue: 8500,
+    createdAt: '2025-01-20T13:00:00Z',
+    updatedAt: '2025-02-05T09:30:00Z'
+  },
+  {
+    id: 'demo-5',
+    firstName: 'Robert',
+    lastName: 'Anderson',
+    email: 'bob.anderson@email.com',
+    phone: '(440) 555-0105',
+    address: '456 Maple Drive',
+    city: 'Bay Village',
+    state: 'OH',
+    zipCode: '44140',
+    notes: 'Exterior repaint needed due to hail damage - insurance claim',
+    type: 'homeowner',
+    status: 'active',
+    tags: ['Exterior', 'Insurance Claim'],
+    estimateCount: 2,
+    totalEstimateValue: 6800,
+    createdAt: '2024-10-10T15:00:00Z',
+    updatedAt: '2025-01-15T11:00:00Z'
+  },
+  {
+    id: 'demo-6',
+    firstName: 'Jennifer',
+    lastName: 'Martinez',
+    email: 'jennifer.m@southpark.com',
+    phone: '(440) 555-0106',
+    address: '3400 Park Boulevard',
+    city: 'Shaker Heights',
+    state: 'OH',
+    zipCode: '44122',
+    type: 'property-manager',
+    status: 'active',
+    tags: ['Interior', 'Commercial', 'VIP'],
+    estimateCount: 12,
+    totalEstimateValue: 72000,
+    createdAt: '2024-08-15T08:00:00Z',
+    updatedAt: '2025-02-04T17:00:00Z'
+  },
+  {
+    id: 'demo-7',
+    firstName: 'Thomas',
+    lastName: 'Wilson',
+    email: 'tom.w@construction.com',
+    phone: '(440) 555-0107',
+    address: '1200 Builder Way',
+    city: 'Parma',
+    state: 'OH',
+    zipCode: '44129',
+    type: 'contractor',
+    status: 'inactive',
+    tags: ['Residential', 'Referral'],
+    estimateCount: 1,
+    totalEstimateValue: 3200,
+    createdAt: '2024-09-20T10:00:00Z',
+    updatedAt: '2024-11-30T09:00:00Z'
+  },
+  {
+    id: 'demo-8',
+    firstName: 'Amanda',
+    lastName: 'Davis',
+    email: 'amanda.d@email.com',
+    phone: '(440) 555-0108',
+    address: '789 Sunset Lane',
+    city: 'Avon Lake',
+    state: 'OH',
+    zipCode: '44012',
+    type: 'homeowner',
+    status: 'prospect',
+    tags: ['Interior', 'Exterior'],
+    estimateCount: 0,
+    totalEstimateValue: 0,
+    createdAt: '2025-02-01T16:00:00Z',
+    updatedAt: '2025-02-05T14:00:00Z'
+  }
+];
+
 // Default tags for painting business
 const defaultTags = [
   'Interior',
@@ -69,10 +219,17 @@ const defaultTags = [
   'Custom Colors'
 ];
 
+// Check if demo mode is active
+const isDemoMode = typeof window !== 'undefined' && 
+  (localStorage.getItem('demoMode') === 'true' || window.location.search.includes('demo=true'));
+
+// Load demo customers if in demo mode
+const initialCustomers = isDemoMode ? demoCustomers : [];
+
 export const useCustomerStore = create<CustomerState>()(
   persist(
     (set, get) => ({
-      customers: [],
+      customers: initialCustomers,
       selectedCustomer: null,
       tags: defaultTags,
       isLoading: false,

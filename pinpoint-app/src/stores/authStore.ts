@@ -105,6 +105,28 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
+        // Check for demo mode
+        const isDemoMode = localStorage.getItem('demoMode') === 'true' || 
+                          window.location.search.includes('demo=true');
+        
+        if (isDemoMode) {
+          // Auto-login as demo user with demo data
+          localStorage.setItem('demoMode', 'true');
+          set({
+            user: {
+              id: 'demo-user',
+              phoneNumber: '+1 (440) 555-DEMO',
+              name: 'Demo Estimator',
+              role: 'admin',
+              status: 'approved'
+            },
+            accessToken: 'demo-token',
+            isAuthenticated: true,
+            isLoading: false
+          });
+          return;
+        }
+        
         const { accessToken } = get();
         
         if (!accessToken) {
