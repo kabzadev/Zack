@@ -16,6 +16,7 @@ const ZONE_LABELS: Record<string, string> = {
 export const ColorPickerPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  // Re-read on every render so assistant's subsequent show_colors calls update the search
   const initialSearch = searchParams.get('search') || '';
   const returnTo = searchParams.get('returnTo');
   const isSelectionMode = returnTo === 'photo-capture';

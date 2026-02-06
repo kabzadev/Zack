@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useConversation } from '@elevenlabs/react';
 import { MessageCircle, X, Mic, MicOff, Volume2, Minimize2, Maximize2 } from 'lucide-react';
 import { telemetry } from '../utils/telemetry';
+import { SHERWIN_WILLIAMS_COLORS, searchColors } from '../data/sherwin-williams-colors';
+import type { ColorFamily } from '../data/sherwin-williams-colors';
 
 const ASSISTANT_AGENT_ID = 'agent_6601kgsyy9fhe6tsbwhp7mjzv51j';
 
@@ -35,11 +37,47 @@ export const FloatingAssistant = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const toolHandlersRef = useRef<Record<string, (params: any) => Promise<string>>>({
     show_colors: async (params: { search?: string }) => {
-      const search = params?.search || '';
+      let search = params?.search || '';
       telemetry.assistant('tool:show_colors', { search });
-      setMessages(prev => [...prev, { role: 'system', text: `🎨 Showing ${search} colors...` }]);
+
+      // Smart search: try direct first, then simplify
+      let resultCount = searchColors(search).length;
+      
+      if (resultCount === 0 && search) {
+        // Strip plurals, modifiers, noise words
+        const cleaned = search
+          .replace(/\b(colors?|shades?|tones?|paints?)\b/gi, '')
+          .replace(/s\b/g, '')
+          .replace(/\b(deep|light|dark|bright|pale|rich|warm|cool|soft|muted|vivid)\b/gi, '')
+          .trim();
+        if (cleaned) {
+          resultCount = searchColors(cleaned).length;
+          if (resultCount > 0) search = cleaned;
+        }
+      }
+
+      if (resultCount === 0 && search) {
+        // Try color family
+        const familyMap: Record<string, ColorFamily> = {
+          red: 'red', blue: 'blue', green: 'green', yellow: 'yellow',
+          orange: 'orange', purple: 'purple', violet: 'purple',
+          pink: 'red', beige: 'neutral', tan: 'neutral',
+          gray: 'neutral', grey: 'neutral', white: 'white', cream: 'white',
+          black: 'black', neutral: 'neutral', brown: 'orange',
+        };
+        const words = search.toLowerCase().split(/\s+/);
+        for (const word of words) {
+          const fam = familyMap[word];
+          if (fam) {
+            resultCount = SHERWIN_WILLIAMS_COLORS.filter(c => c.family === fam).length;
+            if (resultCount > 0) { search = word; break; }
+          }
+        }
+      }
+
+      setMessages(prev => [...prev, { role: 'system', text: `🎨 Showing ${search} colors (${resultCount} results)...` }]);
       navigateRef.current(`/colors?search=${encodeURIComponent(search)}`);
-      return `Opened the color picker filtered to "${search}" colors.`;
+      return `Opened the color picker with "${search}" — found ${resultCount} colors.${resultCount === 0 ? ' Try a broader search term.' : ''}`;
     },
     navigate: async (params: { page?: string }) => {
       const page = params?.page?.toLowerCase() || 'home';

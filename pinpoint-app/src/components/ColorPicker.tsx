@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, X, Check, Copy, Palette } from 'lucide-react';
 import {
   SHERWIN_WILLIAMS_COLORS,
@@ -26,11 +26,60 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   const [selectedColor, setSelectedColor] = useState<SWColor | null>(initialColor);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  // Update query when initialSearch prop changes (e.g., assistant calls show_colors again)
+  useEffect(() => {
+    if (initialSearch !== undefined) {
+      setQuery(initialSearch);
+      setActiveFamily(null); // Reset family filter too
+    }
+  }, [initialSearch]);
+
+  // Smart search: try exact match first, then progressively relax
+  const smartSearch = useCallback((q: string, family?: ColorFamily): SWColor[] => {
+    if (!q && !family) return SHERWIN_WILLIAMS_COLORS;
+    
+    // Try exact search first
+    let results = searchColors(q, family);
+    if (results.length > 0) return results;
+
+    // Strip common suffixes: plurals, "colors", "shades"
+    const cleaned = q
+      .replace(/\b(colors?|shades?|tones?|paints?)\b/gi, '')
+      .replace(/s\b/g, '') // strip trailing s (plurals)
+      .replace(/\b(deep|light|dark|bright|pale|rich|warm|cool|soft|muted|vivid)\b/gi, '') // strip modifiers
+      .trim();
+    
+    if (cleaned && cleaned !== q) {
+      results = searchColors(cleaned, family);
+      if (results.length > 0) return results;
+    }
+
+    // Try matching by color family name
+    const familyMap: Record<string, ColorFamily> = {
+      red: 'red', blue: 'blue', green: 'green', yellow: 'yellow',
+      orange: 'orange', purple: 'purple', violet: 'purple',
+      pink: 'red', beige: 'neutral', tan: 'neutral',
+      gray: 'neutral', grey: 'neutral', white: 'white', cream: 'white',
+      black: 'black', neutral: 'neutral', brown: 'orange',
+    };
+    
+    const words = (cleaned || q).toLowerCase().split(/\s+/);
+    for (const word of words) {
+      const fam = familyMap[word];
+      if (fam) {
+        results = SHERWIN_WILLIAMS_COLORS.filter(c => c.family === fam);
+        if (results.length > 0) return results;
+      }
+    }
+
+    // Last resort: return the original query results (empty)
+    return searchColors(q, family);
+  }, []);
+
   // Filtered colors
   const filteredColors = useMemo(() => {
-    if (!query && !activeFamily) return SHERWIN_WILLIAMS_COLORS;
-    return searchColors(query, activeFamily ?? undefined);
-  }, [query, activeFamily]);
+    return smartSearch(query, activeFamily ?? undefined);
+  }, [query, activeFamily, smartSearch]);
 
   // Handle swatch tap
   const handleSwatchSelect = useCallback((color: SWColor) => {
