@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Layout, Card, Button, Input, Badge } from '../components';
 import { useAuthStore } from '../stores/authStore';
 import { useBusinessConfigStore } from '../stores/businessConfigStore';
+import { useThemeStore } from '../stores/themeStore';
 import {
   User,
   Building2,
@@ -26,6 +27,7 @@ import {
 export const Settings = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
 
   /* Profile form */
   const [profileName, setProfileName] = useState(user?.name || '');
@@ -359,18 +361,18 @@ export const Settings = () => {
 
         {/* Theme Toggle */}
         <Card>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between" onClick={() => toggleTheme()} style={{ cursor: 'pointer' }}>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center">
-                <span className="text-lg">🎨</span>
+                <span className="text-lg">{theme === 'dark' ? '🌙' : '☀️'}</span>
               </div>
               <div>
-                <p className="font-medium text-white text-sm">Theme</p>
-                <p className="text-xs text-slate-500">Dark mode is always on — it's the Pinpoint look</p>
+                <p className="font-medium text-white text-sm">{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</p>
+                <p className="text-xs text-slate-500">Tap to switch theme</p>
               </div>
             </div>
-            <div className="w-12 h-7 bg-blue-500 rounded-full relative">
-              <div className="absolute right-1 top-1 w-5 h-5 bg-white rounded-full shadow" />
+            <div className={`w-12 h-7 rounded-full relative transition-colors ${theme === 'dark' ? 'bg-blue-500' : 'bg-slate-300'}`}>
+              <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all ${theme === 'dark' ? 'right-1' : 'left-1'}`} />
             </div>
           </div>
         </Card>
