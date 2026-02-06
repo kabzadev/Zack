@@ -8,6 +8,7 @@ import { CustomerDetail } from './pages/CustomerDetail';
 import { NewCustomer } from './pages/NewCustomer';
 import { EstimateBuilder } from './pages/EstimateBuilder';
 import { EstimateDetail } from './pages/EstimateDetail';
+import { EstimatePrint } from './pages/EstimatePrint';
 import { ColorPickerPage } from './pages/ColorPickerPage';
 import { VoiceEstimate } from './pages/VoiceEstimate';
 import { PhotoCapture } from './pages/PhotoCapture';
@@ -139,6 +140,10 @@ function AppContent() {
           <Route 
             path="/estimates/new" 
             element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <EstimateBuilder /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/estimates/:id/print" 
+            element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <EstimatePrint /> : <Navigate to="/login" replace />} 
           />
           <Route 
             path="/estimates/:id" 

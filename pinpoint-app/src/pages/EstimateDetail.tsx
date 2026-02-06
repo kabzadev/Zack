@@ -311,7 +311,7 @@ export const EstimateDetail = () => {
               variant="secondary"
               size="md"
               icon={<FileDown size={18} />}
-              onClick={() => setShowPDFModal(true)}
+              onClick={() => navigate(`/estimates/${estimate.id}/print`)}
               fullWidth
             >
               PDF
