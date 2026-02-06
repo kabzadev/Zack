@@ -108,7 +108,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
   }, [isOpen, draftId]);
 
   // Extract structured data from conversation text — handles natural speech
-  const extractFields = useCallback((dId: string, entries: VoiceConversationEntry[]) => {
+  const extractFields = useCallback(async (dId: string, entries: VoiceConversationEntry[]) => {
     // Process user messages and agent messages separately for context
     const userText = entries.filter(e => e.role === 'user').map(e => e.message).join(' ');
     // Agent text available for future context matching
@@ -122,53 +122,76 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     const currentDraftData = storeRef.current.getDraftById(dId);
 
     // === Customer name ===
-    // Only extract if not already set
+    // Only extract if not already set (e.g. by lookup_customer client tool)
     if (!currentDraftData?.customerName) {
-      // Flexible: case-insensitive, handles "for keith kabza", "it's for john", "name is mike davis"
-      // Also catch agent confirming: "Got it, John Smith"
-      const namePatterns = [
-        /(?:for|customer(?:\s+is)?|name(?:\s+is)?|this is for|estimate for|it'?s for)\s+(?:the\s+)?([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
-        /(?:got it|okay|perfect),?\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
-        /(?:i'?m|my name is|this is|i am)\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
-        /(?:call me|they call me)\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
-      ];
-      // Skip list for false positives (all lowercase for comparison)
-      const skipNames = new Set([
-        'interior', 'exterior', 'duration', 'superpaint', 'super', 'emerald',
-        'sherwin', 'williams', 'pinpoint', 'hey', 'sure', 'okay', 'perfect',
-        'the', 'a', 'an', 'about', 'around', 'just', 'paint', 'painting',
-        'estimate', 'project', 'house', 'home', 'looking', 'going', 'doing',
-        'getting', 'ready', 'here', 'there', 'good', 'great', 'fine',
-      ]);
-      for (const pat of namePatterns) {
-        const m = allText.match(pat);
-        if (m) {
-          const rawName = m[1].trim();
-          const firstWord = rawName.split(/\s+/)[0].toLowerCase();
-          if (!skipNames.has(firstWord)) {
-            // Title-case the name
-            const titleCased = rawName.replace(/\b[a-z]/g, c => c.toUpperCase());
+      // First: detect "existing customer" / "already in the system" → trigger auto-lookup
+      const existingCustomerMatch = allText.match(
+        /(?:existing|current|my)\s+customer\s+(?:is\s+)?(?:named?\s+)?([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i
+      ) || allText.match(
+        /(?:already\s+(?:in|on)\s+(?:the\s+)?(?:system|database|file|record))\s*[.,]?\s*(?:(?:it'?s|name(?:\s+is)?|they'?re?)\s+)?([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i
+      ) || allText.match(
+        /(?:you\s+(?:already\s+)?have|look\s*up|pull\s*up|search\s*for)\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i
+      );
+
+      if (existingCustomerMatch) {
+        const lookupName = existingCustomerMatch[1].trim();
+        const skipLookup = new Set(['my', 'the', 'a', 'an', 'existing', 'current', 'their', 'customer']);
+        if (!skipLookup.has(lookupName.toLowerCase())) {
+          // Trigger the lookup_customer tool programmatically
+          try {
+            await lookupCustomerRef.current({ name: lookupName });
+          } catch {
+            // If lookup fails, still set the name
+            const titleCased = lookupName.replace(/\b[a-z]/g, c => c.toUpperCase());
             updates.customerName = titleCased;
-            break;
           }
         }
       }
-      // Fallback: look for two consecutive capitalized-ish words in user text that might be a name
-      if (!updates.customerName) {
-        const userEntries = entries.filter(e => e.role === 'user').map(e => e.message);
-        for (const msg of userEntries) {
-          // Match two words that look like a name (at least 2 chars each)
-          const twoWordMatch = msg.match(/\b([A-Za-z][a-z'-]{1,})\s+([A-Za-z][a-z'-]{1,})\b/);
-          if (twoWordMatch) {
-            const first = twoWordMatch[1].toLowerCase();
-            const second = twoWordMatch[2].toLowerCase();
-            if (!skipNames.has(first) && !skipNames.has(second) && first.length >= 2 && second.length >= 2) {
-              // Heuristic: short user message (< 5 words) that looks like just a name
-              const wordCount = msg.trim().split(/\s+/).length;
-              if (wordCount <= 4) {
-                const titleCased = `${twoWordMatch[1].charAt(0).toUpperCase()}${twoWordMatch[1].slice(1)} ${twoWordMatch[2].charAt(0).toUpperCase()}${twoWordMatch[2].slice(1)}`;
-                updates.customerName = titleCased;
-                break;
+
+      // Only proceed with regex extraction if lookup didn't set it
+      const refreshedDraft = storeRef.current.getDraftById(dId);
+      if (!refreshedDraft?.customerName && !updates.customerName) {
+        const namePatterns = [
+          /(?:for|customer(?:\s+is)?|name(?:\s+is)?|this is for|estimate for|it'?s for)\s+(?:the\s+)?(?:(?:my\s+)?existing\s+customer\s+)?([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
+          /(?:got it|okay|perfect),?\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
+          /(?:i'?m|my name is|this is|i am)\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
+          /(?:call me|they call me)\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
+        ];
+        const skipNames = new Set([
+          'interior', 'exterior', 'duration', 'superpaint', 'super', 'emerald',
+          'sherwin', 'williams', 'pinpoint', 'hey', 'sure', 'okay', 'perfect',
+          'the', 'a', 'an', 'about', 'around', 'just', 'paint', 'painting',
+          'estimate', 'project', 'house', 'home', 'looking', 'going', 'doing',
+          'getting', 'ready', 'here', 'there', 'good', 'great', 'fine',
+          'my', 'existing', 'current', 'customer', 'already',
+        ]);
+        for (const pat of namePatterns) {
+          const m = allText.match(pat);
+          if (m) {
+            const rawName = m[1].trim();
+            const firstWord = rawName.split(/\s+/)[0].toLowerCase();
+            if (!skipNames.has(firstWord)) {
+              const titleCased = rawName.replace(/\b[a-z]/g, c => c.toUpperCase());
+              updates.customerName = titleCased;
+              break;
+            }
+          }
+        }
+        // Fallback: look for two consecutive capitalized-ish words in user text
+        if (!updates.customerName) {
+          const userEntries = entries.filter(e => e.role === 'user').map(e => e.message);
+          for (const msg of userEntries) {
+            const twoWordMatch = msg.match(/\b([A-Za-z][a-z'-]{1,})\s+([A-Za-z][a-z'-]{1,})\b/);
+            if (twoWordMatch) {
+              const first = twoWordMatch[1].toLowerCase();
+              const second = twoWordMatch[2].toLowerCase();
+              if (!skipNames.has(first) && !skipNames.has(second) && first.length >= 2 && second.length >= 2) {
+                const wordCount = msg.trim().split(/\s+/).length;
+                if (wordCount <= 4) {
+                  const titleCased = `${twoWordMatch[1].charAt(0).toUpperCase()}${twoWordMatch[1].slice(1)} ${twoWordMatch[2].charAt(0).toUpperCase()}${twoWordMatch[2].slice(1)}`;
+                  updates.customerName = titleCased;
+                  break;
+                }
               }
             }
           }
