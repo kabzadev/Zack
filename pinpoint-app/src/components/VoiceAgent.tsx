@@ -46,14 +46,36 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
 
   // Client tool: lookup customer by name and auto-fill draft fields
   const lookupCustomer = useCallback(async (params: { name?: string }) => {
-    const searchName = params?.name || '';
+    const searchName = (params?.name || '').trim();
     if (!searchName) return JSON.stringify({ found: false, message: 'No name provided' });
 
     const cs = customerStoreRef.current;
-    const results = cs.searchCustomers({ search: searchName });
+    
+    // Try full name first
+    let results = cs.searchCustomers({ search: searchName });
+    
+    // If no results, try each word individually (e.g. "Keith" alone should find "Keith Kabza")
+    if (results.length === 0) {
+      const words = searchName.split(/\s+/).filter(w => w.length > 1);
+      for (const word of words) {
+        results = cs.searchCustomers({ search: word });
+        if (results.length > 0) break;
+      }
+    }
+    
+    // If still no results, try fuzzy — check if any customer's first or last name starts with the search
+    if (results.length === 0) {
+      const allCustomers = cs.searchCustomers({ search: '' });
+      const searchLower = searchName.toLowerCase();
+      results = allCustomers.filter(c => 
+        c.firstName.toLowerCase().startsWith(searchLower) ||
+        c.lastName.toLowerCase().startsWith(searchLower) ||
+        `${c.firstName} ${c.lastName}`.toLowerCase().startsWith(searchLower)
+      );
+    }
 
     if (results.length === 0) {
-      return JSON.stringify({ found: false, message: `No customer found matching "${searchName}". Ask for their details.` });
+      return JSON.stringify({ found: false, message: `No customer found matching "${searchName}". Ask for their full name and details to create a new customer.` });
     }
 
     const customer = results[0];
@@ -71,6 +93,11 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       });
     }
 
+    // If multiple matches, list them but use the first
+    const otherMatches = results.length > 1 
+      ? ` (Also found: ${results.slice(1, 4).map(r => `${r.firstName} ${r.lastName}`).join(', ')})`
+      : '';
+
     return JSON.stringify({
       found: true,
       name: fullName,
@@ -80,7 +107,9 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       type: customer.type,
       tags: customer.tags,
       estimateCount: customer.estimateCount,
-      message: `Found ${fullName} at ${fullAddress}. Phone: ${customer.phone}. Their info has been added to the estimate. ${customer.estimateCount > 0 ? `They have ${customer.estimateCount} previous estimate(s).` : 'This is their first estimate.'} Now ask about the project details.`,
+      multipleMatches: results.length > 1,
+      matchCount: results.length,
+      message: `Found ${fullName} at ${fullAddress}. Phone: ${customer.phone}. Their info has been added to the estimate.${otherMatches} Now ask about the project details.`,
     });
   }, []);
 
