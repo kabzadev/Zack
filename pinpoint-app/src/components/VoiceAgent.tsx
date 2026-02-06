@@ -257,48 +257,56 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     }
 
     // === Days ===
-    // "3 days", "about a week", "two and a half days", "a day and a half"
-    const dayPatterns = [
-      /(\d+(?:\.\d+)?)\s*days?/i,
-      /(one|two|three|four|five|six|seven|eight|nine|ten)\s*days?/i,
-      /(?:a|one)\s*(?:day\s*and\s*a\s*half|and\s*a\s*half\s*days?)/i,
-      /(?:about\s*)?(?:a|one)\s*week/i,
-      /half\s*(?:a\s*)?day/i,
-    ];
-    for (const pat of dayPatterns) {
-      const m = allLower.match(pat);
-      if (m) {
-        if (/day and a half|half days/.test(m[0])) {
-          updates.estimatedDays = 1.5;
-        } else if (/week/.test(m[0])) {
-          updates.estimatedDays = 5;
-        } else if (/half a day|half day/.test(m[0])) {
-          updates.estimatedDays = 0.5;
-        } else {
-          updates.estimatedDays = wordNums[m[1]] || parseFloat(m[1]);
+    // Only extract if not already set
+    if (!currentDraftData?.estimatedDays) {
+      // "3 days", "about a week", "two and a half days", "a day and a half"
+      const dayPatterns = [
+        /(\d+(?:\.\d+)?)\s*days?/i,
+        /(one|two|three|four|five|six|seven|eight|nine|ten)\s*days?/i,
+        /(?:a|one)\s*(?:day\s*and\s*a\s*half|and\s*a\s*half\s*days?)/i,
+        /(?:about\s*)?(?:a|one)\s*week/i,
+        /half\s*(?:a\s*)?day/i,
+      ];
+      for (const pat of dayPatterns) {
+        const m = allLower.match(pat);
+        if (m) {
+          if (/day and a half|half days/.test(m[0])) {
+            updates.estimatedDays = 1.5;
+          } else if (/week/.test(m[0])) {
+            updates.estimatedDays = 5;
+          } else if (/half a day|half day/.test(m[0])) {
+            updates.estimatedDays = 0.5;
+          } else {
+            updates.estimatedDays = wordNums[m[1]] || parseFloat(m[1]);
+          }
+          break;
         }
-        break;
       }
     }
 
     // === Hours per day ===
-    const hrsMatch = allLower.match(/(\d+)\s*hours?\s*(?:per|a|each)\s*day/);
-    if (hrsMatch) updates.hoursPerDay = parseInt(hrsMatch[1], 10);
+    if (!currentDraftData?.hoursPerDay) {
+      const hrsMatch = allLower.match(/(\d+)\s*hours?\s*(?:per|a|each)\s*day/i);
+      if (hrsMatch) updates.hoursPerDay = parseInt(hrsMatch[1], 10);
+    }
 
     // === Rate ===
-    // "$65 an hour", "65 per hour", "hourly rate is 70", "charging 55 an hour"
-    const ratePatterns = [
-      /\$?\s*(\d+)\s*(?:an?\s*hour|per\s*hour|\/\s*h(?:ou)?r|hourly|\/\s*hour)/i,
-      /(?:hourly\s*)?rate\s*(?:is|of|at)?\s*\$?\s*(\d+)/i,
-      /(?:charg(?:e|ing))\s*\$?\s*(\d+)\s*(?:an?\s*hour|per\s*hour|hourly)?/i,
-    ];
-    for (const pat of ratePatterns) {
-      const m = allLower.match(pat);
-      if (m) {
-        const rate = parseInt(m[1], 10);
-        if (rate >= 20 && rate <= 200) { // sanity check
-          updates.hourlyRate = rate;
-          break;
+    // Only extract if not already set
+    if (!currentDraftData?.hourlyRate) {
+      // "$65 an hour", "65 per hour", "hourly rate is 70", "charging 55 an hour"
+      const ratePatterns = [
+        /\$?\s*(\d+)\s*(?:an?\s*hour|per\s*hour|\/\s*h(?:ou)?r|hourly|\/\s*hour)/i,
+        /(?:hourly\s*)?rate\s*(?:is|of|at)?\s*\$?\s*(\d+)/i,
+        /(?:charg(?:e|ing))\s*\$?\s*(\d+)\s*(?:an?\s*hour|per\s*hour|hourly)?/i,
+      ];
+      for (const pat of ratePatterns) {
+        const m = allLower.match(pat);
+        if (m) {
+          const rate = parseInt(m[1], 10);
+          if (rate >= 20 && rate <= 200) { // sanity check
+            updates.hourlyRate = rate;
+            break;
+          }
         }
       }
     }
@@ -316,31 +324,48 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     const productPrices: Record<string, number> = {
       'duration': 75, 'duration home': 65, 'superpaint': 55, 'super paint': 55,
       'emerald': 85, 'proclassic': 70, 'pro classic': 70, 'problock': 45,
-      'primer': 45, 'pro block': 45,
+      'primer': 45, 'pro block': 45, 'paint': 55,
     };
+    // Normalize product name variants to canonical names
+    const productAliases: Record<string, string> = {
+      'super paint': 'superpaint',
+      'pro classic': 'proclassic',
+      'pro block': 'problock',
+    };
+    const productList = 'duration home|duration|superpaint|super paint|emerald|proclassic|pro classic|problock|pro block|primer|paint';
     
-    // More flexible: "10 gallons of Duration", "Duration 10 gallons", "we need 5 gallons"
+    // More flexible: "10 gallons of Duration", "Duration 10 gallons", "we need 5 gallons",
+    // "I want 5 gallons of super paint", "emerald for the trim, 3 gallons"
     const gallonPatterns = [
-      /(\d+)\s*gallons?\s*(?:of\s+)?(?:(?:the\s+)?(?:sherwin[- ]?williams\s+)?)?(duration home|duration|superpaint|super paint|emerald|proclassic|pro classic|problock|pro block|primer|paint)?(?:\s+(?:for|on|in)\s+(?:the\s+)?([\w\s]+?))?(?:[.,]|$)/gi,
-      /(duration home|duration|superpaint|super paint|emerald|proclassic|pro classic|problock|pro block|primer)\s+(\d+)\s*gallons?/gi,
+      // "X gallons of [product] [for area]"
+      new RegExp(`(\\d+)\\s*gallons?\\s*(?:of\\s+)?(?:(?:the\\s+)?(?:sherwin[- ]?williams\\s+)?)?(${productList})?(?:\\s+(?:for|on|in)\\s+(?:the\\s+)?([\\w\\s]+?))?(?:[.,;]|$)`, 'gi'),
+      // "[product] X gallons"
+      new RegExp(`(${productList})\\s+(?:for\\s+(?:the\\s+)?([\\w\\s]+?)\\s+)?(\\d+)\\s*gallons?`, 'gi'),
+      // "[product] for [area], X gallons"
+      new RegExp(`(${productList})\\s+(?:for|on)\\s+(?:the\\s+)?([\\w\\s]+?)\\s*,?\\s*(\\d+)\\s*gallons?`, 'gi'),
+      // "I want/need/using X gallons [of product]"
+      new RegExp(`(?:i\\s+)?(?:want|need|using|use|got|getting)\\s+(\\d+)\\s*gallons?(?:\\s+(?:of\\s+)?(?:(?:the\\s+)?(?:sherwin[- ]?williams\\s+)?)?(${productList}))?`, 'gi'),
     ];
     
-    const paintItems = [...(store.getDraftById(dId)?.paintItems || [])];
+    const paintItems = [...(currentDraftData?.paintItems || [])];
     
     for (const pat of gallonPatterns) {
       pat.lastIndex = 0;
       let m;
       while ((m = pat.exec(allLower)) !== null) {
         let gallons: number, product: string, area: string;
+        // Determine which capture groups hold what based on pattern
         if (/^\d/.test(m[1])) {
           gallons = parseInt(m[1], 10);
           product = (m[2] || 'paint').trim();
           area = (m[3] || 'general').trim();
         } else {
           product = m[1].trim();
-          gallons = parseInt(m[2], 10);
-          area = 'general';
+          area = (m[2] || 'general').trim();
+          gallons = parseInt(m[3], 10);
         }
+        // Normalize product name
+        product = productAliases[product] || product;
         if (gallons > 0 && gallons <= 100) {
           const exists = paintItems.some(p => p.gallons === gallons && p.product === product && p.area === area);
           if (!exists) {
@@ -354,7 +379,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
         }
       }
     }
-    if (paintItems.length > 0) updates.paintItems = paintItems;
+    if (paintItems.length > (currentDraftData?.paintItems?.length || 0)) updates.paintItems = paintItems;
 
     // === Colors ===
     // Expanded popular SW colors
@@ -374,30 +399,64 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       'shoji white': 'SW 7042', 'origami white': 'SW 7636', 'swiss coffee': 'SW 9502',
       'white dove': 'SW 7006', 'evening shadow': 'SW 7662',
     };
+    // Fuzzy aliases for spoken color names (e.g. "naval blue" → "naval", "the navy color" → "naval")
+    const colorAliases: Record<string, string> = {
+      'naval blue': 'naval', 'navy': 'naval', 'navy blue': 'naval', 'the navy color': 'naval',
+      'sea salt green': 'sea salt', 'agreeable': 'agreeable gray', 'repose': 'repose gray',
+      'iron ore black': 'iron ore', 'tricorn': 'tricorn black', 'snowbound white': 'snowbound',
+      'accessible': 'accessible beige', 'urbane': 'urbane bronze', 'evergreen': 'evergreen fog',
+      'greek villa white': 'greek villa', 'caviar black': 'caviar', 'mega greige gray': 'mega greige',
+      'mindful': 'mindful gray', 'colonnade': 'colonnade gray', 'worldly': 'worldly gray',
+      'dorian': 'dorian gray', 'gauntlet': 'gauntlet gray', 'intellectual': 'intellectual gray',
+      'anew': 'anew gray', 'balanced': 'balanced beige',
+    };
     
-    const colorAssignments = [...(store.getDraftById(dId)?.colorAssignments || [])];
+    const colorAssignments = [...(currentDraftData?.colorAssignments || [])];
+    // Check aliases first
+    for (const [alias, canonical] of Object.entries(colorAliases)) {
+      if (allLower.includes(alias)) {
+        const swCode = swColors[canonical];
+        if (swCode) {
+          const exists = colorAssignments.some(c => c.color.toLowerCase() === canonical);
+          if (!exists) {
+            let area = 'general';
+            const escapedAlias = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const areaContext = allLower.match(new RegExp(`(body|trim|door|exterior|interior|walls?|ceiling|accent|siding|shutters?)\\s+(?:in\\s+|is\\s+|with\\s+)?${escapedAlias}|${escapedAlias}\\s+(?:for\\s+|on\\s+)?(?:the\\s+)?(body|trim|door|exterior|interior|walls?|ceiling|accent|siding|shutters?)`));
+            if (areaContext) area = (areaContext[1] || areaContext[2]).trim();
+            colorAssignments.push({ area, color: canonical, swCode });
+          }
+        }
+      }
+    }
+    // Check exact SW color names
     for (const [name, code] of Object.entries(swColors)) {
       if (allLower.includes(name)) {
         const exists = colorAssignments.some(c => c.color.toLowerCase() === name);
         if (!exists) {
           // Try to find the area context near this color mention
           let area = 'general';
-          const areaContext = allLower.match(new RegExp(`(body|trim|door|exterior|interior|walls?|ceiling|accent|siding|shutters?)\\s+(?:in\\s+|is\\s+|with\\s+)?${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(?:for\\s+|on\\s+)?(?:the\\s+)?(body|trim|door|exterior|interior|walls?|ceiling|accent|siding|shutters?)`));
+          const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const areaContext = allLower.match(new RegExp(`(body|trim|door|exterior|interior|walls?|ceiling|accent|siding|shutters?)\\s+(?:in\\s+|is\\s+|with\\s+)?${escapedName}|${escapedName}\\s+(?:for\\s+|on\\s+)?(?:the\\s+)?(body|trim|door|exterior|interior|walls?|ceiling|accent|siding|shutters?)`));
           if (areaContext) area = (areaContext[1] || areaContext[2]).trim();
           colorAssignments.push({ area, color: name, swCode: code });
         }
       }
     }
-    // SW codes like "SW 6244", "62 44", "sixty-two forty-four"
+    // SW codes like "SW 6244", "SW-6244", "SW#6244", "sw 6244"
     const swCodeMatches = allText.matchAll(/SW\s*[-#]?\s*(\d{4})/gi);
     for (const m of swCodeMatches) {
       const code = `SW ${m[1]}`;
       const exists = colorAssignments.some(c => c.swCode === code);
       if (!exists) {
-        colorAssignments.push({ area: 'general', color: code, swCode: code });
+        // Try to reverse-lookup the color name from the code
+        let colorName = code;
+        for (const [name, swCode] of Object.entries(swColors)) {
+          if (swCode === code) { colorName = name; break; }
+        }
+        colorAssignments.push({ area: 'general', color: colorName, swCode: code });
       }
     }
-    if (colorAssignments.length > 0) updates.colorAssignments = colorAssignments;
+    if (colorAssignments.length > (currentDraftData?.colorAssignments?.length || 0)) updates.colorAssignments = colorAssignments;
 
     // === Scope of work ===
     const prepItems = [
