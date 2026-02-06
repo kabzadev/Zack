@@ -108,50 +108,102 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     const userLower = userText.toLowerCase();
     const updates: Partial<VoiceDraft> = {};
 
+    // Get current draft to avoid overwriting fields already set (e.g. by client tools)
+    const currentDraftData = storeRef.current.getDraftById(dId);
+
     // === Customer name ===
-    // Flexible: "John Smith", "for John", "it's for the Johnsons", "customer is Mike Davis"
-    // Also catch agent confirming: "Got it, John Smith"
-    const namePatterns = [
-      /(?:for|customer(?:\s+is)?|name(?:\s+is)?|this is for|estimate for|it'?s for)\s+(?:the\s+)?([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,2})/,
-      /(?:got it|okay|perfect),?\s+([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,2})/,
-      /^([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){1,2})$/m, // standalone name on its own line
-    ];
-    for (const pat of namePatterns) {
-      const m = allText.match(pat);
-      if (m) {
-        const name = m[1].trim();
-        // Filter out false positives (common non-name words)
-        const skip = ['Interior', 'Exterior', 'Duration', 'SuperPaint', 'Emerald', 'Sherwin', 'Williams', 'Pinpoint', 'Hey', 'Sure', 'Okay', 'Perfect'];
-        if (!skip.includes(name.split(' ')[0])) {
-          updates.customerName = name;
-          break;
+    // Only extract if not already set
+    if (!currentDraftData?.customerName) {
+      // Flexible: case-insensitive, handles "for keith kabza", "it's for john", "name is mike davis"
+      // Also catch agent confirming: "Got it, John Smith"
+      const namePatterns = [
+        /(?:for|customer(?:\s+is)?|name(?:\s+is)?|this is for|estimate for|it'?s for)\s+(?:the\s+)?([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
+        /(?:got it|okay|perfect),?\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
+        /(?:i'?m|my name is|this is|i am)\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
+        /(?:call me|they call me)\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
+      ];
+      // Skip list for false positives (all lowercase for comparison)
+      const skipNames = new Set([
+        'interior', 'exterior', 'duration', 'superpaint', 'super', 'emerald',
+        'sherwin', 'williams', 'pinpoint', 'hey', 'sure', 'okay', 'perfect',
+        'the', 'a', 'an', 'about', 'around', 'just', 'paint', 'painting',
+        'estimate', 'project', 'house', 'home', 'looking', 'going', 'doing',
+        'getting', 'ready', 'here', 'there', 'good', 'great', 'fine',
+      ]);
+      for (const pat of namePatterns) {
+        const m = allText.match(pat);
+        if (m) {
+          const rawName = m[1].trim();
+          const firstWord = rawName.split(/\s+/)[0].toLowerCase();
+          if (!skipNames.has(firstWord)) {
+            // Title-case the name
+            const titleCased = rawName.replace(/\b[a-z]/g, c => c.toUpperCase());
+            updates.customerName = titleCased;
+            break;
+          }
+        }
+      }
+      // Fallback: look for two consecutive capitalized-ish words in user text that might be a name
+      if (!updates.customerName) {
+        const userEntries = entries.filter(e => e.role === 'user').map(e => e.message);
+        for (const msg of userEntries) {
+          // Match two words that look like a name (at least 2 chars each)
+          const twoWordMatch = msg.match(/\b([A-Za-z][a-z'-]{1,})\s+([A-Za-z][a-z'-]{1,})\b/);
+          if (twoWordMatch) {
+            const first = twoWordMatch[1].toLowerCase();
+            const second = twoWordMatch[2].toLowerCase();
+            if (!skipNames.has(first) && !skipNames.has(second) && first.length >= 2 && second.length >= 2) {
+              // Heuristic: short user message (< 5 words) that looks like just a name
+              const wordCount = msg.trim().split(/\s+/).length;
+              if (wordCount <= 4) {
+                const titleCased = `${twoWordMatch[1].charAt(0).toUpperCase()}${twoWordMatch[1].slice(1)} ${twoWordMatch[2].charAt(0).toUpperCase()}${twoWordMatch[2].slice(1)}`;
+                updates.customerName = titleCased;
+                break;
+              }
+            }
+          }
         }
       }
     }
 
     // === Address ===
-    // Flexible: "123 Main Street", "the address is 456 Oak Ave Apt 2", spoken numbers
-    const addrPatterns = [
-      /(\d+\s+[\w\s]+(?:Street|St|Avenue|Ave|Drive|Dr|Road|Rd|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl|Circle|Cir|Terrace|Ter|Trail|Trl|Pike|Highway|Hwy|Parkway|Pkwy)[\w\s,#.]*)/i,
-      /address\s+(?:is\s+)?(\d+[\w\s,#.]+)/i,
-      /(?:at|on|lives?\s+(?:at|on))\s+(\d+[\w\s,#.]+(?:Street|St|Avenue|Ave|Drive|Dr|Road|Rd|Lane|Ln|Blvd|Court|Ct|Way|Place|Pl)[\w\s,#.]*)/i,
-    ];
-    for (const pat of addrPatterns) {
-      const m = allText.match(pat);
-      if (m) {
-        updates.propertyAddress = m[1].trim().replace(/\s+/g, ' ');
-        break;
+    // Only extract if not already set
+    if (!currentDraftData?.propertyAddress) {
+      // Flexible: "123 Main Street", "the address is 456 Oak Ave Apt 2", spoken numbers,
+      // and also addresses without standard suffixes like "123 Main"
+      const addrPatterns = [
+        /(\d+\s+[\w\s]+(?:street|st|avenue|ave|drive|dr|road|rd|lane|ln|boulevard|blvd|court|ct|way|place|pl|circle|cir|terrace|ter|trail|trl|pike|highway|hwy|parkway|pkwy)[\w\s,#.]*)/i,
+        /address\s+(?:is\s+)?(\d+[\w\s,#.]+)/i,
+        /(?:at|on|lives?\s+(?:at|on))\s+(\d+[\w\s,#.]+)/i,
+        /(?:property|house|home|job)\s+(?:is\s+)?(?:at\s+)?(\d+[\w\s,#.]+)/i,
+        // Bare address: number followed by at least one word (e.g. "123 maple")
+        /\b(\d{1,6}\s+[a-z][\w\s]{2,}?)(?:\.|,|\s*$)/i,
+      ];
+      for (const pat of addrPatterns) {
+        const m = allText.match(pat);
+        if (m) {
+          const addr = m[1].trim().replace(/\s+/g, ' ');
+          // Sanity: must start with a number and have at least one word after
+          if (/^\d+\s+\w/.test(addr) && addr.length >= 5) {
+            updates.propertyAddress = addr;
+            break;
+          }
+        }
       }
     }
 
     // === Project type ===
-    // Check user text first to avoid agent questions being matched
-    const typeText = userLower || allLower;
-    if (typeText.includes('interior') && typeText.includes('exterior')) updates.projectType = 'both';
-    else if (/\b(?:outside|exterior)\b/.test(typeText)) updates.projectType = 'exterior';
-    else if (/\b(?:inside|interior)\b/.test(typeText)) updates.projectType = 'interior';
+    // Only extract if not already set
+    if (!currentDraftData?.projectType) {
+      // Check user text first to avoid agent questions being matched
+      const typeText = userLower || allLower;
+      if (typeText.includes('interior') && typeText.includes('exterior')) updates.projectType = 'both';
+      else if (/\b(?:outside|exterior)\b/.test(typeText)) updates.projectType = 'exterior';
+      else if (/\b(?:inside|interior)\b/.test(typeText)) updates.projectType = 'interior';
+    }
 
     // === Areas/rooms ===
+    // Merge with existing areas rather than overwriting
     const roomNames = [
       'living room', 'kitchen', 'hallway', 'hall', 'master bedroom', 'master bath',
       'bedroom', 'bathroom', 'bath', 'dining room', 'family room', 'great room',
@@ -163,40 +215,44 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       'nursery', 'playroom', 'mudroom', 'mud room', 'pantry',
       'whole house', 'entire house', 'all rooms', 'throughout',
     ];
-    const areas: string[] = [];
+    const existingAreas = currentDraftData?.areas || [];
+    const areas: string[] = [...existingAreas];
     for (const room of roomNames) {
       if (allLower.includes(room) && !areas.includes(room)) areas.push(room);
     }
-    if (areas.length > 0) updates.areas = areas;
+    if (areas.length > existingAreas.length) updates.areas = areas;
 
     // Room count: "5 rooms", "three bedrooms"
     const wordNums: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
-    const roomCountMatch = allLower.match(/(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:rooms?|bedrooms?|areas?|bathrooms?)/);
+    const roomCountMatch = allLower.match(/(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:rooms?|bedrooms?|areas?|bathrooms?)/i);
     if (roomCountMatch && areas.length === 0) {
       const n = wordNums[roomCountMatch[1]] || parseInt(roomCountMatch[1], 10);
       if (n) updates.areas = [`${n} rooms`];
     }
 
     // === Painters ===
-    // "2 guys", "three painters", "me and one other guy", "just me", "a crew of 4"
-    const painterPatterns = [
-      /(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:guys?|painters?|men|people|workers?|crew\s*(?:members?)?)/i,
-      /crew\s*(?:of|size)?\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)/i,
-      /(?:just me|myself|solo|alone|one man)/i,
-      /(?:me and|myself and)\s*(\d+|one|two|three|four)/i,
-    ];
-    for (const pat of painterPatterns) {
-      const m = allLower.match(pat);
-      if (m) {
-        if (/just me|myself|solo|alone|one man/.test(m[0])) {
-          updates.numberOfPainters = 1;
-        } else if (/me and|myself and/.test(m[0])) {
-          const extra = wordNums[m[1]] || parseInt(m[1], 10);
-          updates.numberOfPainters = 1 + (extra || 1);
-        } else {
-          updates.numberOfPainters = wordNums[m[1]] || parseInt(m[1], 10);
+    // Only extract if not already set
+    if (!currentDraftData?.numberOfPainters) {
+      // "2 guys", "three painters", "me and one other guy", "just me", "a crew of 4"
+      const painterPatterns = [
+        /(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:guys?|painters?|men|people|workers?|crew\s*(?:members?)?)/i,
+        /crew\s*(?:of|size)?\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)/i,
+        /(?:just me|myself|solo|alone|one man)/i,
+        /(?:me and|myself and)\s*(\d+|one|two|three|four)/i,
+      ];
+      for (const pat of painterPatterns) {
+        const m = allLower.match(pat);
+        if (m) {
+          if (/just me|myself|solo|alone|one man/.test(m[0])) {
+            updates.numberOfPainters = 1;
+          } else if (/me and|myself and/.test(m[0])) {
+            const extra = wordNums[m[1]] || parseInt(m[1], 10);
+            updates.numberOfPainters = 1 + (extra || 1);
+          } else {
+            updates.numberOfPainters = wordNums[m[1]] || parseInt(m[1], 10);
+          }
+          break;
         }
-        break;
       }
     }
 

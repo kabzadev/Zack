@@ -357,8 +357,8 @@ export const Settings = () => {
           </Card>
         )}
 
-        {/* Theme Toggle (Future) */}
-        <Card className="opacity-60">
+        {/* Theme Toggle */}
+        <Card>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-slate-700/50 rounded-xl flex items-center justify-center">
@@ -366,11 +366,11 @@ export const Settings = () => {
               </div>
               <div>
                 <p className="font-medium text-white text-sm">Theme</p>
-                <p className="text-xs text-slate-500">Dark mode (coming soon)</p>
+                <p className="text-xs text-slate-500">Dark mode is always on — it's the Pinpoint look</p>
               </div>
             </div>
-            <div className="w-12 h-7 bg-slate-700 rounded-full relative">
-              <div className="absolute right-1 top-1 w-5 h-5 bg-blue-500 rounded-full" />
+            <div className="w-12 h-7 bg-blue-500 rounded-full relative">
+              <div className="absolute right-1 top-1 w-5 h-5 bg-white rounded-full shadow" />
             </div>
           </div>
         </Card>

@@ -87,7 +87,7 @@ export const AdminPanel = () => {
       const all: AdminUser[] = Array.isArray(usersRes.data) ? usersRes.data : [];
       setActiveUsers(all.filter((u) => u.status === 'approved'));
     } catch {
-      setError('Failed to load admin data. Is the backend running on port 3002?');
+      setError('Backend server not connected. User management requires the backend to be deployed. Go to Settings to configure rates and pricing.');
     } finally {
       setLoading(false);
     }
