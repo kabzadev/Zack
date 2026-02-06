@@ -7,19 +7,23 @@ export const ColorPickerPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
+  const returnTo = searchParams.get('returnTo');
 
   const handleColorSelect = (color: SWColor) => {
-    // For now, log the selection — this will integrate with the estimate builder
-    console.log('Selected color:', color);
-    // Navigate back or use however needed
-    navigate(-1);
+    if (returnTo) {
+      // Return to the calling page with the selected color
+      const encoded = encodeURIComponent(JSON.stringify(color));
+      navigate(`/${returnTo}?selectedColor=${encoded}`, { replace: true });
+    } else {
+      navigate(-1);
+    }
   };
 
   return (
     <Layout>
       <PageHeader
-        title="Paint Colors"
-        subtitle="Sherwin-Williams Collection"
+        title={returnTo ? 'Pick a Color' : 'Paint Colors'}
+        subtitle={returnTo ? 'Tap a color to select it' : 'Sherwin-Williams Collection'}
         showBack
       />
       <div className="flex flex-col" style={{ height: 'calc(100vh - 140px)' }}>

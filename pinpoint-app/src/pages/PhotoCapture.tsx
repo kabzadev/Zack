@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useCallback, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components';
 import { PageHeader } from '../components/PageHeader';
 import { PhotoUploader } from '../components/PhotoUploader';
@@ -22,17 +22,76 @@ interface ColorZone {
   color: SWColor | null;
 }
 
+// Serializable version of zones for sessionStorage
+interface SavedZone {
+  id: string;
+  color: SWColor | null;
+}
+
 export const PhotoCapture = () => {
   const navigate = useNavigate();
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [activeZone, setActiveZone] = useState<string>('body');
+  const [searchParams] = useSearchParams();
+
+  // Restore state from sessionStorage if returning from color picker
+  const savedImage = sessionStorage.getItem('pc-image');
+  const savedZonesStr = sessionStorage.getItem('pc-zones');
+  const savedActiveZone = sessionStorage.getItem('pc-activeZone');
+  const returnedColor = searchParams.get('selectedColor'); // JSON-encoded SWColor
+
+  const [capturedImage, setCapturedImage] = useState<string | null>(savedImage);
+  const [activeZone, setActiveZone] = useState<string>(savedActiveZone || 'body');
   const [colorSearch, setColorSearch] = useState('');
-  const [zones, setZones] = useState<ColorZone[]>([
-    { id: 'body', label: 'Body / Walls', icon: <Home size={16} />, color: null },
-    { id: 'trim', label: 'Trim', icon: <PanelTop size={16} />, color: null },
-    { id: 'doors', label: 'Doors', icon: <DoorOpen size={16} />, color: null },
-    { id: 'accent', label: 'Accent', icon: <Paintbrush size={16} />, color: null },
-  ]);
+  // Rebuild zones with saved colors if available
+  const buildInitialZones = (): ColorZone[] => {
+    const defaults: ColorZone[] = [
+      { id: 'body', label: 'Body / Walls', icon: <Home size={16} />, color: null },
+      { id: 'trim', label: 'Trim', icon: <PanelTop size={16} />, color: null },
+      { id: 'doors', label: 'Doors', icon: <DoorOpen size={16} />, color: null },
+      { id: 'accent', label: 'Accent', icon: <Paintbrush size={16} />, color: null },
+    ];
+    if (savedZonesStr) {
+      try {
+        const saved: SavedZone[] = JSON.parse(savedZonesStr);
+        return defaults.map(z => {
+          const s = saved.find(sv => sv.id === z.id);
+          return s?.color ? { ...z, color: s.color } : z;
+        });
+      } catch { /* ignore */ }
+    }
+    return defaults;
+  };
+
+  const [zones, setZones] = useState<ColorZone[]>(buildInitialZones);
+
+  // Handle color returned from the full color picker
+  useEffect(() => {
+    if (returnedColor) {
+      try {
+        const color: SWColor = JSON.parse(decodeURIComponent(returnedColor));
+        const zone = savedActiveZone || 'body';
+        setZones(prev => prev.map(z => z.id === zone ? { ...z, color } : z));
+        // Clear the URL param
+        navigate('/photo-capture', { replace: true });
+      } catch { /* ignore */ }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returnedColor]);
+
+  // Save state to sessionStorage whenever it changes
+  useEffect(() => {
+    if (capturedImage) {
+      sessionStorage.setItem('pc-image', capturedImage);
+    }
+  }, [capturedImage]);
+
+  useEffect(() => {
+    const toSave: SavedZone[] = zones.map(z => ({ id: z.id, color: z.color }));
+    sessionStorage.setItem('pc-zones', JSON.stringify(toSave));
+  }, [zones]);
+
+  useEffect(() => {
+    sessionStorage.setItem('pc-activeZone', activeZone);
+  }, [activeZone]);
 
   const handleImageCapture = useCallback((dataUrl: string) => {
     setCapturedImage(dataUrl);
@@ -155,7 +214,7 @@ export const PhotoCapture = () => {
                   </p>
                 </div>
                 <button
-                  onClick={() => navigate('/colors')}
+                  onClick={() => navigate('/colors?returnTo=photo-capture')}
                   className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
                 >
                   Browse All →
@@ -252,7 +311,7 @@ export const PhotoCapture = () => {
 
             {/* Reset */}
             <button
-              onClick={() => { setCapturedImage(null); setZones(z => z.map(zone => ({ ...zone, color: null }))); setColorSearch(''); }}
+              onClick={() => { setCapturedImage(null); setZones(z => z.map(zone => ({ ...zone, color: null }))); setColorSearch(''); sessionStorage.removeItem('pc-image'); sessionStorage.removeItem('pc-zones'); sessionStorage.removeItem('pc-activeZone'); }}
               className="w-full py-3 rounded-xl text-sm text-slate-500 hover:text-slate-300 transition-colors"
             >
               Start Over with New Photo
