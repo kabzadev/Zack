@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useCustomerStore } from '../stores/customerStore';
 import { useEstimateStore } from '../stores/estimateStore';
 import { Layout, Card, StatCard, Badge } from '../components';
-import { Users, FileText, DollarSign, UserCheck, Plus, Mic, ChevronRight, LogOut } from 'lucide-react';
+import { Users, FileText, DollarSign, UserCheck, Plus, Mic, Camera, ChevronRight, LogOut } from 'lucide-react';
 
 export const Dashboard = () => {
   const navigate = useNavigate();
@@ -83,6 +83,19 @@ export const Dashboard = () => {
                 <div className="flex-1">
                   <p className="font-semibold text-white">Voice Estimate</p>
                   <p className="text-sm text-slate-400">Talk to Damon, our AI assistant</p>
+                </div>
+                <ChevronRight size={20} className="text-slate-600" />
+              </div>
+            </Card>
+
+            <Card variant="clickable" onClick={() => navigate('/photo-capture')}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center shadow-lg shadow-purple-500/25">
+                  <Camera size={22} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-white">Color Visualizer</p>
+                  <p className="text-sm text-slate-400">See colors on your project</p>
                 </div>
                 <ChevronRight size={20} className="text-slate-600" />
               </div>

@@ -14,3 +14,5 @@ export { SearchBar } from './SearchBar';
 export { ColorPicker } from './ColorPicker';
 export { ColorSwatch } from './ColorSwatch';
 export { EstimatePDF } from './EstimatePDF';
+export { PhotoUploader } from './PhotoUploader';
+export { BeforeAfterSlider } from './BeforeAfterSlider';

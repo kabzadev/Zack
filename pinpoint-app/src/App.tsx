@@ -9,6 +9,8 @@ import { NewCustomer } from './pages/NewCustomer';
 import { EstimateBuilder } from './pages/EstimateBuilder';
 import { ColorPickerPage } from './pages/ColorPickerPage';
 import { VoiceEstimate } from './pages/VoiceEstimate';
+import { PhotoCapture } from './pages/PhotoCapture';
+import { AIVisualization } from './pages/AIVisualization';
 import { useAuthStore } from './stores/authStore';
 import { useEffect, useState } from 'react';
 import './App.css';
@@ -113,6 +115,14 @@ function AppContent() {
           <Route 
             path="/voice-estimate" 
             element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <VoiceEstimate /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/photo-capture" 
+            element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <PhotoCapture /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/ai-visualization" 
+            element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <AIVisualization /> : <Navigate to="/login" replace />} 
           />
           <Route 
             path="/estimates" 
