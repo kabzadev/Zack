@@ -30,31 +30,42 @@ export const FloatingAssistant = () => {
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
-  // Client tools defined as stable refs so useConversation doesn't re-init
-  const conversation = useConversation({
-    clientTools: {
-      show_colors: async (params: { search?: string }) => {
-        const search = params?.search || '';
-        setMessages(prev => [...prev, { role: 'system', text: `🎨 Showing ${search} colors...` }]);
-        navigateRef.current(`/colors?search=${encodeURIComponent(search)}`);
-        return `Opened the color picker filtered to "${search}" colors.`;
-      },
-      navigate: async (params: { page?: string }) => {
-        const page = params?.page?.toLowerCase() || 'home';
-        const route = pageRoutes[page] || '/';
-        setMessages(prev => [...prev, { role: 'system', text: `📱 Opening ${page}...` }]);
-        navigateRef.current(route);
-        return `Navigated to ${page}.`;
-      },
+  // Client tools — handle agent tool calls in the browser
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const clientToolHandlers: Record<string, (params: any) => Promise<string>> = {
+    show_colors: async (params: { search?: string }) => {
+      const search = params?.search || '';
+      setMessages(prev => [...prev, { role: 'system', text: `🎨 Showing ${search} colors...` }]);
+      navigateRef.current(`/colors?search=${encodeURIComponent(search)}`);
+      return `Opened the color picker filtered to "${search}" colors.`;
     },
+    navigate: async (params: { page?: string }) => {
+      const page = params?.page?.toLowerCase() || 'home';
+      const route = pageRoutes[page] || '/';
+      setMessages(prev => [...prev, { role: 'system', text: `📱 Opening ${page}...` }]);
+      navigateRef.current(route);
+      return `Navigated to ${page}.`;
+    },
+  };
+
+  const conversation = useConversation({
+    clientTools: clientToolHandlers,
     onConnect: () => setError(null),
     onDisconnect: () => {},
     onMessage: (props: { message: string; source: string }) => {
       const role = props.source === 'user' ? 'user' as const : 'agent' as const;
       setMessages(prev => [...prev, { role, text: props.message }]);
     },
-    onError: (msg: string) => setError(String(msg)),
-  } as Parameters<typeof useConversation>[0]);
+    onError: (msg: string, context?: unknown) => {
+      console.error('[Assistant] Error:', msg, context);
+      setError(String(msg));
+    },
+    onUnhandledClientToolCall: (toolCall: { tool_name: string; tool_call_id: string; parameters: unknown }) => {
+      console.warn('[Assistant] Unhandled client tool call:', toolCall);
+      setError(`Tool "${toolCall.tool_name}" not found`);
+    },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -68,9 +79,10 @@ export const FloatingAssistant = () => {
       return;
     }
     try {
-      await conversation.startSession({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (conversation.startSession as any)({
         agentId: ASSISTANT_AGENT_ID,
-      } as Parameters<typeof conversation.startSession>[0]);
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to connect');
     }
