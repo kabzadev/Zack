@@ -1,5 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Camera, Upload, RotateCw, Crop, X, Image as ImageIcon } from 'lucide-react';
+import { telemetry } from '../utils/telemetry';
+
+// Detect mobile/tablet — use native camera instead of getUserMedia
+const isMobileDevice = () =>
+  /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+  (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
 
 interface PhotoUploaderProps {
   onImageCapture: (imageDataUrl: string) => void;
@@ -51,7 +57,16 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onImageCapture, cl
   };
 
   const startCamera = async () => {
+    // On mobile, use the native camera (full-screen, high quality)
+    if (isMobileDevice()) {
+      telemetry.nav('camera:native_mobile');
+      fileInputRef.current?.click();
+      return;
+    }
+
+    // Desktop: use getUserMedia for in-browser camera
     try {
+      telemetry.nav('camera:getUserMedia');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
       });
@@ -63,6 +78,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onImageCapture, cl
       setIsCameraActive(true);
     } catch {
       // Camera not available — fall back to file upload
+      telemetry.nav('camera:fallback_file');
       fileInputRef.current?.click();
     }
   };

@@ -57,7 +57,7 @@ export const VoiceEstimate = () => {
   }, [store]);
 
   const handleEstimateReady = useCallback((data: VoiceEstimateData) => {
-    telemetry.voice('estimate_ready', { customer: data.draft?.customerName, rooms: data.draft?.rooms?.length });
+    telemetry.voice('estimate_ready', { customer: data.draft?.customerName, areas: data.draft?.areas?.length });
     setEstimateData(data);
     setShowAgent(false);
     setPageState('review');
