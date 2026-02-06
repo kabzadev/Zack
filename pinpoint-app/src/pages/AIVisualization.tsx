@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components';
 import { PageHeader } from '../components/PageHeader';
 import { BeforeAfterSlider } from '../components/BeforeAfterSlider';
+import { telemetry } from '../utils/telemetry';
 import {
   Download,
   Share2,
@@ -58,6 +59,7 @@ IMPORTANT INSTRUCTIONS:
 
   const generateWithGemini = useCallback(async (imageSrc: string, colorZones: ColorZoneInfo[]) => {
     setProcessingStep('Sending to AI...');
+    telemetry.color('gemini:start', { zones: colorZones.length, zoneDetails: colorZones.map(z => `${z.label}:${z.colorName}`) });
 
     // Get the base64 image data (strip data URL prefix)
     let base64Data: string;
@@ -68,24 +70,27 @@ IMPORTANT INSTRUCTIONS:
       base64Data = data;
       mimeType = header.split(':')[1].split(';')[0];
     } else {
-      // Fetch and convert
       const response = await fetch(imageSrc);
       const blob = await response.blob();
       mimeType = blob.type;
       base64Data = await blobToBase64(blob);
     }
 
+    const originalSize = base64Data.length;
     // Resize if very large to stay under API limits
     if (base64Data.length > 4_000_000) {
+      telemetry.color('gemini:resize', { originalSize, maxDim: 1024 });
       const resized = await resizeImageBase64(imageSrc, 1024);
       base64Data = resized.data;
       mimeType = resized.mime;
     }
 
     const prompt = buildPrompt(colorZones);
+    telemetry.color('gemini:sending', { imageSize: base64Data.length, mimeType, promptLength: prompt.length });
 
     setProcessingStep('AI is painting your house...');
 
+    const startTime = Date.now();
     const response = await fetch(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -107,20 +112,32 @@ IMPORTANT INSTRUCTIONS:
       }),
     });
 
+    const elapsed = Date.now() - startTime;
+    telemetry.color('gemini:response', { status: response.status, ok: response.ok, elapsedMs: elapsed });
+
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      throw new Error(errData?.error?.message || `API error: ${response.status}`);
+      const errMsg = errData?.error?.message || `API error: ${response.status}`;
+      telemetry.error('gemini:api_error', { status: response.status, message: errMsg });
+      throw new Error(errMsg);
     }
 
     const data = await response.json();
 
     // Extract the generated image from response
     const candidates = data.candidates || [];
+    telemetry.color('gemini:candidates', { 
+      count: candidates.length, 
+      partsPerCandidate: candidates.map((c: { content?: { parts?: unknown[] } }) => c.content?.parts?.length || 0),
+      finishReason: candidates[0]?.finishReason,
+    });
+
     for (const candidate of candidates) {
       const parts = candidate.content?.parts || [];
       for (const part of parts) {
         if (part.inlineData?.data) {
           const mime = part.inlineData.mimeType || 'image/png';
+          telemetry.color('gemini:success', { resultMime: mime, resultSize: part.inlineData.data.length, elapsedMs: elapsed });
           return `data:${mime};base64,${part.inlineData.data}`;
         }
       }
@@ -131,11 +148,13 @@ IMPORTANT INSTRUCTIONS:
       const parts = candidate.content?.parts || [];
       for (const part of parts) {
         if (part.text) {
+          telemetry.error('gemini:text_only', { text: part.text.slice(0, 300) });
           throw new Error(`AI responded with text only: "${part.text.slice(0, 200)}"`);
         }
       }
     }
 
+    telemetry.error('gemini:no_image', { rawCandidates: JSON.stringify(candidates).slice(0, 500) });
     throw new Error('No image returned from AI');
   }, [buildPrompt]);
 
@@ -174,20 +193,26 @@ IMPORTANT INSTRUCTIONS:
   const processImage = useCallback(async (image: string, colorZones: ColorZoneInfo[]) => {
     setIsProcessing(true);
     setError(null);
+    telemetry.color('process:start', { zoneCount: colorZones.length });
 
     try {
       setProcessingStep('Connecting to AI...');
       const result = await generateWithGemini(image, colorZones);
+      telemetry.color('process:complete', { success: true });
       setRecoloredImage(result);
       setIsProcessing(false);
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      telemetry.error('process:failed', { message: errMsg });
       console.error('AI visualization error:', err);
       setProcessingStep('Falling back to preview mode...');
       try {
         const fallback = await generateFallbackRecolor(image, colorZones);
+        telemetry.color('process:fallback_used');
         setRecoloredImage(fallback);
-        setError(`AI generation failed — showing color preview. (${err instanceof Error ? err.message : 'Unknown error'})`);
+        setError(`AI generation failed — showing color preview. (${errMsg})`);
       } catch {
+        telemetry.error('process:fallback_failed');
         setError('Failed to generate visualization. Please try again.');
       }
       setIsProcessing(false);
@@ -198,16 +223,26 @@ IMPORTANT INSTRUCTIONS:
     const image = sessionStorage.getItem('visualizer-image');
     const zonesStr = sessionStorage.getItem('visualizer-zones');
 
+    telemetry.color('ai_page:mount', { hasImage: !!image, hasZones: !!zonesStr });
+
     if (!image || !zonesStr) {
+      telemetry.error('ai_page:missing_data', { hasImage: !!image, hasZones: !!zonesStr });
       navigate('/photo-capture');
       return;
     }
 
-    const parsedZones: ColorZoneInfo[] = JSON.parse(zonesStr);
-    setOriginalImage(image);
-    setZones(parsedZones);
-    processImage(image, parsedZones);
-  }, [navigate, processImage]);
+    try {
+      const parsedZones: ColorZoneInfo[] = JSON.parse(zonesStr);
+      telemetry.color('ai_page:zones_parsed', { count: parsedZones.length, zones: parsedZones.map(z => `${z.label}=${z.colorName}`) });
+      setOriginalImage(image);
+      setZones(parsedZones);
+      processImage(image, parsedZones);
+    } catch (e) {
+      telemetry.error('ai_page:parse_error', { error: String(e), rawZones: zonesStr?.slice(0, 200) });
+      navigate('/photo-capture');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRetry = () => {
     if (originalImage && zones.length > 0) {
