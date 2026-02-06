@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinpoint Painting — Approval Pending</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .phone {
+            width: 390px;
+            height: 844px;
+            background: #0f172a;
+            border-radius: 40px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 32px;
+        }
+        
+        /* Status Icon */
+        .status-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.2), rgba(234, 179, 8, 0.1));
+            border: 2px solid rgba(234, 179, 8, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin-bottom: 28px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+        
+        /* Title */
+        .title {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        /* Description */
+        .description {
+            font-size: 15px;
+            color: #94a3b8;
+            text-align: center;
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+        
+        /* User Info Card */
+        .user-card {
+            width: 100%;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+        .user-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 8px;
+        }
+        .user-phone {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 16px;
+        }
+        .user-meta {
+            display: flex;
+            gap: 12px;
+        }
+        .meta-pill {
+            padding: 6px 12px;
+            background: rgba(234, 179, 8, 0.2);
+            border: 1px solid rgba(234, 179, 8, 0.3);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #eab308;
+        }
+        
+        /* Queue Info */
+        .queue-info {
+            width: 100%;
+            padding: 16px 20px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+        .queue-icon { font-size: 20px; }
+        .queue-text {
+            flex: 1;
+            font-size: 13px;
+            color: #60a5fa;
+            line-height: 1.5;
+        }
+        
+        /* Actions */
+        .actions {
+            width: 100%;
+        }
+        .action-btn {
+            width: 100%;
+            padding: 16px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+        .action-btn.primary {
+            background: white;
+            color: #0f172a;
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: auto;
+            padding-top: 32px;
+            text-align: center;
+        }
+        .footer-text {
+            font-size: 12px;
+            color: #64748b;
+        }
+        .footer-email {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="status-icon">⏳</div>
+        
+        <h1 class="title">Account Pending Approval</h1>
+        
+        <p class="description">
+            Your account has been created but requires administrator approval before you can access the system.
+        </p>
+        
+        <div class="user-card">
+            <p class="user-label">Your Info</p>
+            <p class="user-phone">+1 (440) 555-0123</p>
+            <div class="user-meta">
+                <span class="meta-pill">Pending Review</span>
+                <span class="meta-pill">Submitted Today</span>
+            </div>
+        </div>
+        
+        <div class="queue-info">
+            <span class="queue-icon">ℹ️</span>
+            <span class="queue-text">You'll receive an SMS notification once approved. Typically completed within 24 hours.</span>
+        </div>
+        
+        <div class="actions">
+            <button class="action-btn primary">Check Status</button>
+            <button class="action-btn">Sign Out</button>
+        </div>
+        
+        <div class="footer">
+            <p class="footer-text">
+                Questions? Contact <span class="footer-email">admin@pinpointpainting.com</span>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

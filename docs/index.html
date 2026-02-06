@@ -25,15 +25,15 @@
             margin-bottom: 20px;
         }
         .logo-icon {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #1e3a5f, #0f172a);
-            border-radius: 12px;
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 28px;
+            font-size: 22px;
             font-weight: 700;
         }
         .logo-text {
@@ -51,10 +51,10 @@
             display: inline-block;
             margin-top: 16px;
             padding: 8px 20px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
             border-radius: 20px;
-            color: #94a3b8;
+            color: #3b82f6;
             font-size: 13px;
             font-weight: 600;
             letter-spacing: 0.5px;
@@ -78,7 +78,7 @@
             transform: translateY(-4px);
             box-shadow: 0 8px 40px rgba(0,0,0,0.4);
         }
-        .card:hover .title { color: #1e3a5f; }
+        .card:hover .title { color: #3b82f6; }
         .preview {
             height: 200px;
             background: #f8fafc;
@@ -129,10 +129,6 @@
             background: #dc2626;
             color: white;
         }
-        .badge.auth {
-            background: #1e3a5f;
-            color: white;
-        }
         .badge.ai {
             background: linear-gradient(135deg, #8b5cf6, #7c3aed);
             color: white;
@@ -177,50 +173,11 @@
         </header>
         
         <div class="grid">
-            <a href="phone-login.html" class="card">
-                <div class="preview" style="background: #0f172a; color: white;">📱</div>
-                <div class="info">
-                    <div class="title">Phone Login</div>
-                    <div class="desc">SMS-based authentication with Twilio Verify. Phone number entry with country code selector.</div>
-                    <div class="meta">
-                        <span class="badge auth">Twilio</span>
-                        <span class="badge">Auth</span>
-                    </div>
-                    <span class="link">View Mockup <span class="arrow">→</span></span>
-                </div>
-            </a>
-            
-            <a href="otp-verify.html" class="card">
-                <div class="preview" style="background: #1e3a5f; color: white;">🔐</div>
-                <div class="info">
-                    <div class="title">OTP Verification</div>
-                    <div class="desc">6-digit code entry with auto-focus, paste support, countdown timer, and error handling.</div>
-                    <div class="meta">
-                        <span class="badge auth">Twilio</span>
-                        <span class="badge">Auth</span>
-                    </div>
-                    <span class="link">View Mockup <span class="arrow">→</span></span>
-                </div>
-            </a>
-            
-            <a href="approval-pending.html" class="card">
-                <div class="preview" style="background: linear-gradient(135deg, #fef3c7, #fde68a);">⏳</div>
-                <div class="info">
-                    <div class="title">Approval Pending</div>
-                    <div class="desc">New users wait for admin approval. Shows queue position and notification settings.</div>
-                    <div class="meta">
-                        <span class="badge" style="background: #f59e0b; color: white;">Pending</span>
-                        <span class="badge">Auth</span>
-                    </div>
-                    <span class="link">View Mockup <span class="arrow">→</span></span>
-                </div>
-            </a>
-            
             <a href="dashboard.html" class="card">
                 <div class="preview">◆</div>
                 <div class="info">
                     <div class="title">Dashboard</div>
-                    <div class="desc">Home screen with New Estimate CTA, stats, and recent activity.</div>
+                    <div class="desc">Home screen with New Estimate CTA, recent customer list, and monthly performance stats.</div>
                     <div class="meta">
                         <span class="badge">Primary</span>
                         <span class="badge">Estimator</span>
@@ -233,7 +190,7 @@
                 <div class="preview">◎</div>
                 <div class="info">
                     <div class="title">Customer Database</div>
-                    <div class="desc">Searchable customer directory with filtering, tags, estimate history.</div>
+                    <div class="desc">Searchable customer directory with filtering, tags, estimate history, and lifetime value tracking.</div>
                     <div class="meta">
                         <span class="badge">CRM</span>
                         <span class="badge">Estimator</span>
@@ -246,23 +203,10 @@
                 <div class="preview">◉</div>
                 <div class="info">
                     <div class="title">Estimate Builder</div>
-                    <div class="desc">Core calculation: labor (painters × days × rate), materials, add-ons.</div>
+                    <div class="desc">Core calculation interface: labor (painters × days × rate), materials, add-ons, and running total.</div>
                     <div class="meta">
                         <span class="badge">Calculator</span>
                         <span class="badge">Estimator</span>
-                    </div>
-                    <span class="link">View Mockup <span class="arrow">→</span></span>
-                </div>
-            </a>
-            
-            <a href="estimate-pdf-template.html" class="card">
-                <div class="preview" style="background: white; border: 2px solid #e2e8f0;">📄</div>
-                <div class="info">
-                    <div class="title">PDF Estimate Template</div>
-                    <div class="desc">Modern, professional estimate output with brand colors, color swatches, and project preview.</div>
-                    <div class="meta">
-                        <span class="badge">Print</span>
-                        <span class="badge">PDF</span>
                     </div>
                     <span class="link">View Mockup <span class="arrow">→</span></span>
                 </div>
@@ -272,7 +216,7 @@
                 <div class="preview">◐</div>
                 <div class="info">
                     <div class="title">Color Selection</div>
-                    <div class="desc">Sherwin-Williams color browser with search, AI suggestions, palette builder.</div>
+                    <div class="desc">Sherwin-Williams color browser with search, family filtering, AI suggestions, and palette builder.</div>
                     <div class="meta">
                         <span class="badge">Visual</span>
                         <span class="badge">AI Feature</span>
@@ -285,7 +229,7 @@
                 <div class="preview preview-camera">📷</div>
                 <div class="info">
                     <div class="title">Photo Capture</div>
-                    <div class="desc">In-app camera with type tagging (Exterior/Interior), grid overlay.</div>
+                    <div class="desc">In-app camera with type tagging (Exterior/Interior), grid overlay, and quick gallery access.</div>
                     <div class="meta">
                         <span class="badge camera">Camera</span>
                         <span class="badge">Media</span>
@@ -298,7 +242,7 @@
                 <div class="preview preview-dark">🖼️</div>
                 <div class="info">
                     <div class="title">Photo Gallery</div>
-                    <div class="desc">Photo library with Originals/AI tabs, exterior/interior sorting.</div>
+                    <div class="desc">Organized photo library with Originals/AI tabs, exterior/interior sorting, and AI visualization gallery.</div>
                     <div class="meta">
                         <span class="badge">Gallery</span>
                         <span class="badge">Media</span>
@@ -312,10 +256,10 @@
                     <span style="color: white;">✨</span>
                 </div>
                 <div class="info">
-                    <div class="title">AI Color Preview</div>
-                    <div class="desc">Google Gemini-powered before/after with interactive slider and lighting settings.</div>
+                    <div class="title">AI Color Visualization</div>
+                    <div class="desc">Google Gemini-powered before/after preview with interactive slider, lighting settings, and save options.</div>
                     <div class="meta">
-                        <span class="badge ai">Gemini</span>
+                        <span class="badge ai">Google Gemini</span>
                         <span class="badge">AI Feature</span>
                     </div>
                     <span class="link">View Mockup <span class="arrow">→</span></span>
@@ -328,7 +272,7 @@
                 </div>
                 <div class="info">
                     <div class="title">Voice Agent Mode</div>
-                    <div class="desc">ElevenLabs-powered conversational interface with live form population.</div>
+                    <div class="desc">ElevenLabs-powered conversational interface with live form population and voice visualization.</div>
                     <div class="meta">
                         <span class="badge ai">ElevenLabs</span>
                         <span class="badge">Voice</span>
@@ -337,28 +281,13 @@
                 </div>
             </a>
             
-            <a href="admin-user-management.html" class="card">
-                <div class="preview" style="background: #0f172a; border-top: 3px solid #f59e0b; color: white;">
-                    <span style="font-size: 64px;">👥</span>
-                </div>
-                <div class="info">
-                    <div class="title">User Management</div>
-                    <div class="desc">Approve or decline new user requests. View active users, roles, activity.</div>
-                    <div class="meta">
-                        <span class="badge admin">ADMIN</span>
-                        <span class="badge">RBAC</span>
-                    </div>
-                    <span class="link">View Mockup <span class="arrow">→</span></span>
-                </div>
-            </a>
-            
             <a href="admin-panel.html" class="card">
                 <div class="preview" style="background: #0f172a; border-top: 3px solid #dc2626;">
-                    <span style="font-size: 64px; color: white;">◉</span>
+                    <span style="font-size: 64px;">◉</span>
                 </div>
                 <div class="info">
                     <div class="title">Admin Panel</div>
-                    <div class="desc">Team management, system configuration, audit logs, settings. Admin-only access.</div>
+                    <div class="desc">Team management, system configuration, audit logs, and cross-team analytics. Admin-only access.</div>
                     <div class="meta">
                         <span class="badge admin">ADMIN ONLY</span>
                         <span class="badge">RBAC</span>
@@ -370,7 +299,7 @@
         
         <footer>
             <p>Private repository: <a href="https://github.com/kabzadev/zach" class="footer-link">github.com/kabzadev/zach</a></p>
-            <p>20+ GitHub Issues • 3 Development Phases • 12 Interactive Mockups</p>
+            <p>17 GitHub Issues • 3 Development Phases</p>
             <p>© 2026 Pinpoint Painting, LLC</p>
         </footer>
     </div>

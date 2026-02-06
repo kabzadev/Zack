@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinpoint Painting — Phone Login</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .phone {
+            width: 390px;
+            height: 844px;
+            background: #0f172a;
+            border-radius: 40px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Logo Header */
+        .header {
+            padding: 60px 24px 40px;
+            text-align: center;
+        }
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .logo-icon {
+            width: 52px;
+            height: 52px;
+            background: white;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0f172a;
+            font-size: 26px;
+            font-weight: 700;
+        }
+        .logo-text {
+            color: white;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .subtitle {
+            color: #64748b;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        .badge {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 6px 16px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        
+        /* Form Area */
+        .form-area {
+            flex: 1;
+            padding: 0 24px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 12px;
+        }
+        
+        /* Phone Input */
+        .phone-input-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .country-code {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .country-flag { font-size: 20px; }
+        .phone-input {
+            flex: 1;
+            padding: 16px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            color: white;
+            font-size: 18px;
+            font-family: inherit;
+            outline: none;
+        }
+        .phone-input:focus {
+            border-color: #3b82f6;
+        }
+        .phone-input::placeholder {
+            color: #64748b;
+        }
+        
+        /* Continue Button */
+        .btn-primary {
+            padding: 18px;
+            background: white;
+            border: none;
+            border-radius: 12px;
+            color: #0f172a;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 24px;
+        }
+        
+        /* Info Box */
+        .info-box {
+            padding: 16px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .info-icon { 
+            font-size: 20px; 
+            line-height: 1;
+        }
+        .info-text {
+            flex: 1;
+            font-size: 13px;
+            color: #60a5fa;
+            line-height: 1.6;
+        }
+        
+        /* Footer */
+        .footer {
+            padding: 24px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        .footer-text {
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.6;
+        }
+        .footer-link {
+            color: #94a3b8;
+            text-decoration: underline;
+        }
+        
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 18px;
+            margin-bottom: 24px;
+        }
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-text {
+            color: #94a3b8;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="header">
+            <div class="logo">
+                <div class="logo-icon">◆</div>
+                <div class="logo-text">Pinpoint Painting</div>
+            </div>
+            <p class="subtitle">Sign in with your phone number<br>to get started</p>
+            <span class="badge">Crew Login</span>
+        </div>
+        
+        <div class="form-area">
+            <p class="section-title">Enter your phone number</p>
+            
+            <div class="phone-input-container">
+                <div class="country-code">
+                    <span class="country-flag">🇺🇸</span>
+                    <span>+1</span>
+                </div>
+                <input type="tel" class="phone-input" placeholder="(XXX) XXX-XXXX" value="">
+            </div>
+            
+            <button class="btn-primary">Continue</button>
+            
+            <!-- Or show loading state:
+            <div class="loading">
+                <div class="spinner"></div>
+                <span class="loading-text">Sending code...</span>
+            </div>
+            -->
+            
+            <div class="info-box">
+                <span class="info-icon">🔒</span>
+                <span class="info-text">We'll send a 6-digit verification code via SMS. Standard messaging rates may apply.</span>
+            </div>
+            
+            <div class="info-box" style="background: rgba(234, 179, 8, 0.1); border-color: rgba(234, 179, 8, 0.2);">
+                <span class="info-icon" style="color: #eab308;">⚠️</span>
+                <span class="info-text" style="color: #eab308;">First-time users require administrator approval before accessing the system.</span>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p class="footer-text">
+                By signing in, you agree to our<br>
+                <a href="#" class="footer-link">Terms of Service</a> and <a href="#" class="footer-link">Privacy Policy</a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

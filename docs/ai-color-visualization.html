@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinpoint Painting — AI Color Preview</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .phone {
+            width: 390px;
+            height: 844px;
+            background: #0f172a;
+            border-radius: 40px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header */
+        .header {
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .back-btn { 
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            border: none;
+        }
+        .header-content { flex: 1; }
+        .header-title { font-size: 18px; font-weight: 700; color: white; letter-spacing: -0.3px; }
+        .header-sub { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+        .ai-badge {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Image Comparison Area */
+        .comparison-container {
+            position: relative;
+            height: 360px;
+            background: #1e293b;
+            overflow: hidden;
+        }
+        .image-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .image-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #334155 0%, #1e293b 50%, #0f172a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 100px;
+            opacity: 0.5;
+        }
+        .before-label,
+        .after-label {
+            position: absolute;
+            top: 16px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .before-label {
+            left: 16px;
+            background: rgba(0,0,0,0.6);
+            color: #94a3b8;
+        }
+        .after-label {
+            right: 16px;
+            background: #22c55e;
+            color: white;
+        }
+        
+        /* Slider Handle */
+        .slider-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            cursor: ew-resize;
+        }
+        .slider-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        .slider-handle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 44px;
+            height: 44px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            font-size: 18px;
+        }
+        
+        /* Applied Colors Bar */
+        .colors-bar {
+            padding: 20px 24px;
+            background: #1e293b;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .colors-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 14px;
+        }
+        .colors-row {
+            display: flex;
+            gap: 16px;
+        }
+        .color-applied {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+        .color-swatch {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .color-info { flex: 1; }
+        .color-name { font-size: 14px; font-weight: 600; color: white; }
+        .color-location { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+        
+        /* Settings Panel */
+        .settings-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+        }
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 14px;
+        }
+        
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .setting-label { font-size: 15px; color: white; font-weight: 500; }
+        .setting-control {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .toggle {
+            width: 48px;
+            height: 28px;
+            background: #22c55e;
+            border-radius: 14px;
+            position: relative;
+            cursor: pointer;
+        }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+        }
+        .value-display {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            font-size: 13px;
+            color: white;
+            font-weight: 600;
+        }
+        
+        /* AI Processing Notice */
+        .ai-notice {
+            margin: 20px 0;
+            padding: 14px 16px;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .ai-icon { font-size: 24px; }
+        .ai-text { flex: 1; font-size: 13px; color: #c4b5fd; line-height: 1.5; }
+        
+        /* Bottom Actions */
+        .actions {
+            padding: 20px 24px 30px;
+            background: #0f172a;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .action-row {
+            display: flex;
+            gap: 12px;
+        }
+        .btn {
+            flex: 1;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+        .btn-primary {
+            background: white;
+            color: #0f172a;
+        }
+        .action-hint {
+            margin-top: 14px;
+            font-size: 12px;
+            color: #64748b;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="header">
+            <button class="back-btn">‹</button>
+            <div class="header-content">
+                <div class="header-title">AI Color Preview</div>
+                <div class="header-sub">Google Gemini • Interior Bedroom</div>
+            </div>
+            <div class="ai-badge">AI</div>
+        </div>
+        
+        <div class="comparison-container">
+            <div class="image-container">
+                <div class="image-placeholder">🏠</div>
+            </div>
+            <div class="before-label">Original</div>
+            <div class="after-label">AI Preview</div>
+            <div class="slider-container">
+                <div class="slider-line"></div>
+                <div class="slider-handle">◀▶</div>
+            </div>
+        </div>
+        
+        <div class="colors-bar">
+            <div class="colors-title">Applied Colors</div>
+            <div class="colors-row">
+                <div class="color-applied">
+                    <div class="color-swatch" style="background: #2c4a6e;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Naval</div>
+                        <div class="color-location">SW 6244 • Walls</div>
+                    </div>
+                </div>
+                <div class="color-applied">
+                    <div class="color-swatch" style="background: #faf9f6;"></div>
+                    <div class="color-info">
+                        <div class="color-name">Alabaster</div>
+                        <div class="color-location">SW 7008 • Trim</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="settings-panel">
+            <div class="section-title">Visualization Settings</div>
+            
+            <div class="setting-row">
+                <span class="setting-label">Lighting Condition</span>
+                <div class="setting-control">
+                    <span class="value-display">Mid-day ☀️</span>
+                </div>
+            </div>
+            
+            <div class="setting-row">
+                <span class="setting-label">Surface Texture</span>
+                <div class="setting-control">
+                    <span class="value-display">Standard</span>
+                </div>
+            </div>
+            
+            <div class="setting-row">
+                <span class="setting-label">Include Sheen/Gloss</span>
+                <div class="setting-control">
+                    <div class="toggle"></div>
+                </div>
+            </div>
+            
+            <div class="ai-notice">
+                <span class="ai-icon">✨</span>
+                <span class="ai-text">Google Gemini intelligently detects walls, trim, and architectural features for accurate color application.</span>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <div class="action-row">
+                <button class="btn btn-secondary">↺ Regenerate</button>
+                <button class="btn btn-primary">✓ Save to Estimate</button>
+            </div>
+            <div class="action-hint">Drag slider to compare • Processing: ~3 seconds</div>
+        </div>
+    </div>
+</body>
+</html>

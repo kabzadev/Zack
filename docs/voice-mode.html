@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinpoint Painting - Voice Agent</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #020617;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .phone {
+            width: 390px;
+            height: 844px;
+            background: linear-gradient(180deg, #0f172a 0%, #020617 50%, #000000 100%);
+            border-radius: 40px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .status-bar {
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #22c55e;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .close-btn { 
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 16px;
+            border: none;
+        }
+        
+        .orb-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .orb {
+            width: 200px;
+            height: 200px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .orb-inner {
+            width: 140px;
+            height: 140px;
+            background: radial-gradient(circle at 30% 30%, #3b82f6, #1e40af);
+            border-radius: 50%;
+            box-shadow: 
+                0 0 80px rgba(59, 130, 246, 0.5),
+                0 0 160px rgba(59, 130, 246, 0.3),
+                inset 0 0 80px rgba(255,255,255,0.1);
+            animation: breathe 3s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        .mic-icon {
+            font-size: 48px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+        }
+        .orb-ring {
+            position: absolute;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            animation: ripple 3s ease-out infinite;
+        }
+        .orb-ring:nth-child(1) { width: 180px; height: 180px; animation-delay: 0s; }
+        .orb-ring:nth-child(2) { width: 220px; height: 220px; animation-delay: 0.5s; }
+        .orb-ring:nth-child(3) { width: 260px; height: 260px; animation-delay: 1s; }
+        @keyframes ripple {
+            0% { transform: scale(0.8); opacity: 0.6; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+        
+        .agent-label {
+            margin-top: 40px;
+            color: #3b82f6;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+        
+        .conversation {
+            padding: 0 24px 20px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        .message { margin-bottom: 16px; animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message-agent { text-align: left; }
+        .message-user { text-align: right; }
+        .bubble {
+            display: inline-block;
+            padding: 14px 18px;
+            border-radius: 18px;
+            max-width: 85%;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        .message-agent .bubble {
+            background: rgba(30, 41, 59, 0.8);
+            color: #e2e8f0;
+            border-bottom-left-radius: 4px;
+            backdrop-filter: blur(10px);
+        }
+        .message-user .bubble {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .live-form {
+            background: rgba(15, 23, 42, 0.8);
+            margin: 0 20px 20px;
+            padding: 18px;
+            border-radius: 16px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        .form-title { 
+            font-size: 11px; 
+            color: #3b82f6; 
+            font-weight: 600; 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .form-row { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        .form-row:last-child { border-bottom: none; }
+        .form-label { color: #64748b; font-size: 14px; }
+        .form-value { color: #94a3b8; font-size: 14px; font-weight: 500; }
+        .form-value.filled { color: #3b82f6; font-weight: 600; }
+        .form-value::after { content: '—'; }
+        .form-value.filled::after { content: '✓'; margin-left: 6px; }
+        
+        .hint {
+            position: absolute;
+            bottom: 32px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: #475569;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="status-bar">
+            <div class="live-badge">
+                <div class="live-dot"></div>
+                <span>LIVE CONVERSATION</span>
+            </div>
+            <button class="close-btn">✕</button>
+        </div>
+        
+        <div class="orb-container">
+            <div class="orb">
+                <div class="orb-ring"></div>
+                <div class="orb-ring"></div>
+                <div class="orb-ring"></div>
+                <div class="orb-inner">
+                    <span class="mic-icon">🎙️</span>
+                </div>
+            </div>
+            <div class="agent-label">ElevenLabs Agent</div>
+        </div>
+        
+        <div class="conversation">
+            <div class="message message-agent">
+                <div class="bubble">Hey Keith! Ready to start an estimate? What address are we at?</div>
+            </div>
+            <div class="message message-user">
+                <div class="bubble">123 Oak Street, Lakewood</div>
+            </div>
+            <div class="message message-agent">
+                <div class="bubble">Got it. Customer name?</div>
+            </div>
+            <div class="message message-user">
+                <div class="bubble">Sarah Johnson</div>
+            </div>
+            <div class="message message-agent">
+                <div class="bubble">Thanks! What are we painting and how big is the crew?</div>
+            </div>
+        </div>
+        
+        <div class="live-form">
+            <div class="form-title">
+                <span>◉</span>
+                Building Estimate
+            </div>
+            <div class="form-row">
+                <span class="form-label">Customer</span>
+                <span class="form-value filled">Sarah Johnson</span>
+            </div>
+            <div class="form-row">
+                <span class="form-label">Address</span>
+                <span class="form-value filled">123 Oak St</span>
+            </div>
+            <div class="form-row">
+                <span class="form-label">Painters</span>
+                <span class="form-value">Waiting...</span>
+            </div>
+            <div class="form-row">
+                <span class="form-label">Days</span>
+                <span class="form-value">Waiting...</span>
+            </div>
+        </div>
+        
+        <div class="hint">Try: "5 guys, 4 days, exterior repaint, 16 gallons"</div>
+    </div>
+</body>
+</html>

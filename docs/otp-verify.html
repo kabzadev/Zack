@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinpoint Painting — Verify Code</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .phone {
+            width: 390px;
+            height: 844px;
+            background: #0f172a;
+            border-radius: 40px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.4);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            padding: 40px 24px 30px;
+            text-align: center;
+        }
+        .back-btn { 
+            position: absolute;
+            top: 50px;
+            left: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            border: none;
+        }
+        .subtitle {
+            color: #64748b;
+            font-size: 15px;
+            margin-bottom: 8px;
+        }
+        .phone-display {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        /* OTP Input */
+        .otp-section {
+            padding: 20px 24px;
+            text-align: center;
+        }
+        .otp-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 20px;
+        }
+        .otp-inputs {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .otp-box {
+            width: 48px;
+            height: 56px;
+            background: rgba(255,255,255,0.05);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .otp-box.active {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .otp-box.filled {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        /* Timer */
+        .timer {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 32px;
+        }
+        .timer span {
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        
+        /* Resend */
+        .resend {
+            font-size: 14px;
+            color: #64748b;
+        }
+        .resend-btn {
+            color: #3b82f6;
+            font-weight: 600;
+            text-decoration: none;
+            background: none;
+            border: none;
+            font-family: inherit;
+            font-size: inherit;
+            cursor: pointer;
+            padding: 0;
+        }
+        .resend-btn:disabled {
+            color: #475569;
+            cursor: not-allowed;
+        }
+        
+        /* Error State */
+        .error-box {
+            margin: 0 24px 20px;
+            padding: 16px;
+            background: rgba(220, 38, 38, 0.1);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .error-icon { font-size: 18px; }
+        .error-text {
+            flex: 1;
+            font-size: 13px;
+            color: #f87171;
+        }
+        
+        /* Help */
+        .help-section {
+            flex: 1;
+            padding: 0 24px;
+        }
+        .help-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .help-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        .help-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        
+        /* Keyboard hint */
+        .keyboard-hint {
+            padding: 24px;
+            text-align: center;
+            color: #475569;
+            font-size: 13px;
+        }
+        .keyboard-hint span {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            margin: 0 2px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="header" style="position: relative;">
+            <button class="back-btn">‹</button>
+            <p class="subtitle">We sent a code to</p>
+            <p class="phone-display">+1 (440) 555-0123</p>
+        </div>
+        
+        <div class="otp-section">
+            <p class="otp-label">Enter 6-digit code</p>
+            <div class="otp-inputs">
+                <div class="otp-box filled">5</div>
+                <div class="otp-box filled">2</div>
+                <div class="otp-box filled">8</div>
+                <div class="otp-box filled">7</div>
+                <div class="otp-box filled">4</div>
+                <div class="otp-box filled">3</div>
+            </div>
+            
+            <p class="timer">Code expires in <span>2:34</span></p>
+            
+            <p class="resend">
+                Didn't receive it? <button class="resend-btn">Resend code</button>
+            </p>
+            <!-- Or: <p class="resend">You can resend in <span>0:45</span></p> -->
+        </div>
+        
+        <!-- Error state (hidden by default):
+        <div class="error-box">
+            <span class="error-icon">⚠️</span>
+            <span class="error-text">Invalid code. Please try again or request a new code.</span>
+        </div>
+        -->
+        
+        <div class="help-section">
+            <p class="help-title">Troubleshooting</p>
+            <div class="help-item">
+                <div class="help-icon">📱</div>
+                <span>Check your phone number is correct</span>
+            </div>
+            <div class="help-item">
+                <div class="help-icon">📩</div>
+                <span>Check spam/junk folders</span>
+            </div>
+            <div class="help-item">
+                <div class="help-icon">📶</div>
+                <span>Ensure you have signal</span>
+            </div>
+        </div>
+        
+        <div class="keyboard-hint">
+            Tip: You can <span>paste</span> the full code
+        </div>
+    </div>
+</body>
+</html>

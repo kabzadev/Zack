@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinpoint Painting - Estimate Builder</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #fafafa;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .phone {
+            width: 390px;
+            height: 844px;
+            background: #fafafa;
+            border-radius: 40px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #e5e5e5;
+        }
+        .header {
+            background: white;
+            padding: 20px 24px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .back-btn { 
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 18px;
+            border: none;
+        }
+        .header-content { flex: 1; }
+        .header-title { font-size: 18px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px; }
+        .header-sub { font-size: 13px; color: #64748b; margin-top: 2px; }
+        .save-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            border: none;
+        }
+        
+        .content { flex: 1; overflow-y: auto; padding: 20px 24px; }
+        
+        .customer-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 16px;
+        }
+        .cust-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .cust-info { flex: 1; }
+        .cust-name { font-weight: 600; font-size: 15px; color: #0f172a; }
+        .cust-addr { font-size: 13px; color: #64748b; margin-top: 2px; }
+        .cust-edit { color: #3b82f6; font-size: 13px; font-weight: 500; }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .section-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid #f1f5f9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-title { font-size: 13px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; }
+        .section-action { color: #3b82f6; font-size: 13px; font-weight: 500; }
+        
+        .calc-block {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            padding: 24px;
+            text-align: center;
+        }
+        .calc-label { font-size: 13px; color: #64748b; font-weight: 500; }
+        .calc-formula { font-size: 14px; color: #94a3b8; margin-top: 6px; }
+        .calc-total { font-size: 42px; font-weight: 700; color: #0f172a; margin-top: 8px; letter-spacing: -1px; }
+        
+        .input-row {
+            display: flex;
+            padding: 18px;
+            gap: 12px;
+        }
+        .input-group { flex: 1; }
+        .input-label { font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            color: #0f172a;
+        }
+        
+        .material-list { padding: 6px; }
+        .material-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .material-item:last-child { border-bottom: none; }
+        .mat-info { flex: 1; }
+        .mat-name { font-weight: 600; font-size: 15px; color: #0f172a; }
+        .mat-detail { font-size: 13px; color: #64748b; margin-top: 2px; }
+        .mat-price { font-weight: 700; font-size: 16px; color: #0f172a; }
+        
+        .add-btn {
+            margin: 12px;
+            padding: 12px;
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 500;
+            width: calc(100% - 24px);
+        }
+        
+        .total-bar {
+            background: #0f172a;
+            margin: 20px 24px;
+            padding: 22px 24px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .total-label { color: #94a3b8; font-size: 13px; font-weight: 500; }
+        .total-value { color: white; font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }
+        
+        .generate-btn {
+            margin: 0 24px 24px;
+            padding: 18px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="phone">
+        <div class="header">
+            <button class="back-btn">‹</button>
+            <div class="header-content">
+                <div class="header-title">New Estimate</div>
+                <div class="header-sub">ID: PP-2026-0127</div>
+            </div>
+            <button class="save-btn">✓</button>
+        </div>
+        
+        <div class="content">
+            <div class="customer-bar">
+                <div class="cust-avatar">🏠</div>
+                <div class="cust-info">
+                    <div class="cust-name">Sarah Johnson</div>
+                    <div class="cust-addr">123 Oak Street, Lakewood, OH</div>
+                </div>
+                <span class="cust-edit">Edit</span>
+            </div>
+            
+            <div class="section">
+                <div class="section-header">
+                    <span class="section-title">Labor</span>
+                    <span class="section-action">⚡ Voice Fill</span>
+                </div>
+                <div class="calc-block">
+                    <div class="calc-label">Total Labor Cost</div>
+                    <div class="calc-formula">$65/hr × 5 painters × 4 days × 8 hrs</div>
+                    <div class="calc-total">$10,400</div>
+                </div>
+                <div class="input-row">
+                    <div class="input-group">
+                        <div class="input-label">Painters</div>
+                        <input class="input-field" type="number" value="5">
+                    </div>
+                    <div class="input-group">
+                        <div class="input-label">Days</div>
+                        <input class="input-field" type="number" value="4">
+                    </div>
+                    <div class="input-group">
+                        <div class="input-label">$/Hour</div>
+                        <input class="input-field" type="number" value="65">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <div class="section-header">
+                    <span class="section-title">Materials</span>
+                    <span class="section-action">+ Add</span>
+                </div>
+                <div class="material-list">
+                    <div class="material-item">
+                        <div class="mat-info">
+                            <div class="mat-name">Exterior Body</div>
+                            <div class="mat-detail">12 gal × $55 • SW Duration Home</div>
+                        </div>
+                        <div class="mat-price">$660</div>
+                    </div>
+                    <div class="material-item">
+                        <div class="mat-info">
+                            <div class="mat-name">Trim & Doors</div>
+                            <div class="mat-detail">4 gal × $48 • Pro-Classic S/G</div>
+                        </div>
+                        <div class="mat-price">$192</div>
+                    </div>
+                </div>
+                <button class="add-btn">+ Add Material</button>
+            </div>
+            
+            <div class="section">
+                <div class="section-header">
+                    <span class="section-title">Add-Ons</span>
+                </div>
+                <div class="material-list">
+                    <div class="material-item">
+                        <div class="mat-info">
+                            <div class="mat-name">Carpentry - Siding repair</div>
+                            <div class="mat-detail">2 hrs × $90/hr</div>
+                        </div>
+                        <div class="mat-price">$180</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="total-bar">
+            <div>
+                <div class="total-label">ESTIMATE TOTAL</div>
+                <div style="color: white; font-size: 13px; margin-top: 4px;">Labor + Materials + Add-ons</div>
+            </div>
+            <div class="total-value">$11,432</div>
+        </div>
+        
+        <button class="generate-btn">
+            <span>🎨</span>
+            Continue to Colors & PDF
+        </button>
+    </div>
+</body>
+</html>
