@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import { initDatabase } from './config/database';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
+import geminiRoutes from './routes/gemini';
 
 dotenv.config();
 
@@ -67,6 +68,7 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/gemini', geminiRoutes);
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

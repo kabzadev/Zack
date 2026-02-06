@@ -14,10 +14,12 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
-// Google Gemini API — Nano Banana model for image generation
-const GEMINI_API_KEY = 'AIzaSyDlymSdlKlQcb7RcMhPMNH2jHK_ZTyp-pg';
+// Gemini API — use backend proxy when available, fallback to direct
+const BACKEND_URL = import.meta.env.VITE_API_URL || '';
+const GEMINI_PROXY_URL = BACKEND_URL ? `${BACKEND_URL}/api/gemini/generate` : '';
+const GEMINI_API_KEY = 'AIzaSyD4F5xs2nayiYdKJ1q3jqUdGt53Lla3AkA';
 const GEMINI_MODEL = 'gemini-2.5-flash-image';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_DIRECT_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 interface ColorZoneInfo {
   id: string;
@@ -90,27 +92,50 @@ IMPORTANT INSTRUCTIONS:
 
     setProcessingStep('AI is painting your house...');
 
-    const startTime = Date.now();
-    const response = await fetch(GEMINI_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            {
-              inlineData: {
-                mimeType,
-                data: base64Data,
-              },
+    const requestBody = {
+      contents: [{
+        parts: [
+          {
+            inlineData: {
+              mimeType,
+              data: base64Data,
             },
-            { text: prompt },
-          ],
-        }],
-        generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE'],
-        },
-      }),
-    });
+          },
+          { text: prompt },
+        ],
+      }],
+      generationConfig: {
+        responseModalities: ['TEXT', 'IMAGE'],
+      },
+    };
+
+    const startTime = Date.now();
+
+    // Try backend proxy first, fall back to direct API call
+    let response: Response;
+    if (GEMINI_PROXY_URL) {
+      try {
+        response = await fetch(GEMINI_PROXY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+        telemetry.color('gemini:via_proxy', { status: response.status });
+      } catch {
+        telemetry.color('gemini:proxy_failed_fallback_direct');
+        response = await fetch(GEMINI_DIRECT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+      }
+    } else {
+      response = await fetch(GEMINI_DIRECT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+    }
 
     const elapsed = Date.now() - startTime;
     telemetry.color('gemini:response', { status: response.status, ok: response.ok, elapsedMs: elapsed });
