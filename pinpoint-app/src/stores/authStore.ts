@@ -2,18 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from 'axios';
 
-// Auto-detect API URL based on current host
-const getApiUrl = () => {
-  // If frontend is accessed via Tailscale IP, use that for API too
-  if (window.location.hostname === '100.88.213.43') {
-    return 'http://100.88.213.43:3001/api';
-  }
-  // Otherwise use localhost or env variable
-  return import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-};
-
-const API_URL = getApiUrl();
-
+// Types
 export interface User {
   id: string;
   phoneNumber: string;
@@ -38,6 +27,22 @@ interface AuthState {
   refreshToken: () => Promise<boolean>;
 }
 
+// Helpers
+const getApiUrl = () => {
+  if (window.location.hostname === '100.88.213.43') {
+    return 'http://100.88.213.43:3001/api';
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+};
+
+const isDemoMode = () => {
+  return typeof window !== 'undefined' && 
+    (localStorage.getItem('demoMode') === 'true' || window.location.search.includes('demo=true'));
+};
+
+const API_URL = getApiUrl();
+
+// Store
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -84,7 +89,6 @@ export const useAuthStore = create<AuthState>()(
             return { success: false, error: data.error || 'Verification failed' };
           }
           
-          // If user is pending, don't issue tokens yet
           if (data.status === 'pending') {
             set({ 
               user: data.user,
@@ -94,7 +98,6 @@ export const useAuthStore = create<AuthState>()(
             return { success: true, status: 'pending' };
           }
           
-          // User approved - store tokens and user data
           if (data.tokens) {
             set({
               user: data.user,
@@ -103,7 +106,6 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false
             });
             
-            // Store refresh token in localStorage (in production, consider http-only cookie)
             localStorage.setItem('refreshToken', data.tokens.refreshToken);
           }
           
@@ -115,12 +117,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
-        // Check for demo mode
-        const isDemoMode = localStorage.getItem('demoMode') === 'true' || 
-                          window.location.search.includes('demo=true');
-        
-        if (isDemoMode) {
-          // Auto-login as demo user with demo data
+        if (isDemoMode()) {
           localStorage.setItem('demoMode', 'true');
           set({
             user: {
@@ -140,7 +137,6 @@ export const useAuthStore = create<AuthState>()(
         const { accessToken } = get();
         
         if (!accessToken) {
-          // Try to refresh
           const refreshed = await get().refreshToken();
           if (!refreshed) {
             set({ isLoading: false, isAuthenticated: false });
@@ -160,14 +156,12 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false
             });
           } else {
-            // Token expired, try refresh
             const refreshed = await get().refreshToken();
             if (!refreshed) {
               set({ isLoading: false, isAuthenticated: false, user: null });
             }
           }
         } catch (error) {
-          // Try to refresh
           const refreshed = await get().refreshToken();
           if (!refreshed) {
             set({ isLoading: false, isAuthenticated: false, user: null });

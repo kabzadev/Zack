@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// Types
 export interface MaterialItem {
   id: string;
   name: string;
@@ -29,19 +30,13 @@ export interface Estimate {
   scopeOfWork: string[];
   materials: MaterialItem[];
   labor: LaborItem[];
-  
-  // Pricing
   materialMarkupPercent: number;
   taxRate: number;
-  
-  // Metadata
   status: 'draft' | 'sent' | 'approved' | 'rejected' | 'expired';
   createdAt: string;
   updatedAt: string;
   sentAt?: string;
   expiresAt?: string;
-  
-  // Totals (calculated)
   subtotalMaterials: number;
   subtotalLabor: number;
   markupAmount: number;
@@ -53,7 +48,6 @@ interface EstimateState {
   estimates: Estimate[];
   currentEstimate: Estimate | null;
   
-  // Actions
   createEstimate: (customerId: string, customerName: string, customerAddress: string) => Estimate;
   updateEstimate: (id: string, updates: Partial<Estimate>) => void;
   deleteEstimate: (id: string) => void;
@@ -71,9 +65,15 @@ interface EstimateState {
   duplicateEstimate: (id: string) => Estimate;
 }
 
+// Helpers
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
-// Demo estimates for testing UI
+const isDemoMode = () => {
+  return typeof window !== 'undefined' && 
+    (localStorage.getItem('demoMode') === 'true' || window.location.search.includes('demo=true'));
+};
+
+// Demo data
 const demoEstimates: Estimate[] = [
   {
     id: 'est-demo-1',
@@ -178,7 +178,7 @@ const demoEstimates: Estimate[] = [
     labor: [
       { id: 'l7', description: 'Exterior prep and painting', painters: 2, days: 3, hoursPerDay: 8, hourlyRate: 52 }
     ],
-    materialMarkupPercent: 0, // Insurance typically doesn't allow markup
+    materialMarkupPercent: 0,
     taxRate: 8,
     status: 'approved',
     createdAt: '2025-01-05T11:00:00Z',
@@ -220,10 +220,6 @@ const demoEstimates: Estimate[] = [
   }
 ];
 
-// Check if demo mode is active
-const isDemoMode = typeof window !== 'undefined' && 
-  (localStorage.getItem('demoMode') === 'true' || window.location.search.includes('demo=true'));
-
 const defaultMaterials = [
   { name: 'Sherwin-Williams Duration Exterior', category: 'paint' as const, unit: 'gallon' as const, unitPrice: 75 },
   { name: 'Sherwin-Williams SuperPaint Interior', category: 'paint' as const, unit: 'gallon' as const, unitPrice: 65 },
@@ -232,14 +228,14 @@ const defaultMaterials = [
   { name: 'White Caulk', category: 'caulk' as const, unit: 'each' as const, unitPrice: 6 },
   { name: 'Drop Cloths', category: 'supply' as const, unit: 'each' as const, unitPrice: 12 },
   { name: 'Sandpaper (assorted)', category: 'supply' as const, unit: 'case' as const, unitPrice: 25 },
-  { name: 'Patching Compound', category: 'supply' as const, unit: 'gallon' as const, unitPrice: 18 },
+  { name: 'Patching Compound', category: 'supply' as const, unit: 'gallon' as const, unitPrice: 18 }
 ];
 
 export const materialPresets = defaultMaterials;
 
-// Load demo estimates if in demo mode
-const initialEstimates = isDemoMode ? demoEstimates : [];
+const initialEstimates = isDemoMode() ? demoEstimates : [];
 
+// Store
 export const useEstimateStore = create<EstimateState>()(
   persist(
     (set, get) => ({
@@ -256,8 +252,8 @@ export const useEstimateStore = create<EstimateState>()(
           scopeOfWork: [],
           materials: [],
           labor: [],
-          materialMarkupPercent: 20, // Default 20% markup
-          taxRate: 8, // Default 8% tax
+          materialMarkupPercent: 20,
+          taxRate: 8,
           status: 'draft',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -282,14 +278,13 @@ export const useEstimateStore = create<EstimateState>()(
             if (e.id !== id) return e;
             
             const updated = { ...e, ...updates, updatedAt: new Date().toISOString() };
-            // Recalculate if materials or labor changed
+            
             if (updates.materials || updates.labor || updates.materialMarkupPercent !== undefined || updates.taxRate !== undefined) {
               return get().recalculateTotals(updated);
             }
             return updated;
           });
           
-          // Update current estimate if it's the one being updated
           const updatedCurrent = state.currentEstimate?.id === id 
             ? updatedEstimates.find(e => e.id === id) || null
             : state.currentEstimate;
@@ -434,26 +429,19 @@ export const useEstimateStore = create<EstimateState>()(
       },
 
       recalculateTotals: (estimate) => {
-        // Calculate materials subtotal
         const subtotalMaterials = estimate.materials.reduce(
           (sum, m) => sum + m.quantity * m.unitPrice,
           0
         );
 
-        // Calculate labor subtotal (painters × days × hours/day × rate)
         const subtotalLabor = estimate.labor.reduce(
           (sum, l) => sum + l.painters * l.days * l.hoursPerDay * l.hourlyRate,
           0
         );
 
-        // Apply markup to materials only (industry standard)
         const markupAmount = subtotalMaterials * (estimate.materialMarkupPercent / 100);
         const materialsWithMarkup = subtotalMaterials + markupAmount;
-
-        // Calculate tax (on materials with markup only)
         const taxAmount = materialsWithMarkup * (estimate.taxRate / 100);
-
-        // Total
         const total = materialsWithMarkup + taxAmount + subtotalLabor;
 
         return {

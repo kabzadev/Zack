@@ -1,12 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCustomerStore } from '../stores/customerStore';
+import { useCustomerStore, type CustomerType } from '../stores/customerStore';
+import { Layout, Card, Button, Input } from '../components';
+
+const typeConfig: Record<CustomerType, { emoji: string; label: string }> = {
+  homeowner: { emoji: '🏠', label: 'Homeowner' },
+  contractor: { emoji: '🔨', label: 'Contractor' },
+  'property-manager': { emoji: '🏢', label: 'Property Manager' },
+  commercial: { emoji: '🏬', label: 'Commercial' },
+};
 
 export const NewCustomer = () => {
   const navigate = useNavigate();
   const { addCustomer, tags, addTag } = useCustomerStore();
-  
-  const [formData, setFormData] = useState({
+
+  const [form, setForm] = useState({
     firstName: '',
     lastName: '',
     phone: '',
@@ -15,15 +23,14 @@ export const NewCustomer = () => {
     city: '',
     state: '',
     zipCode: '',
-    type: 'homeowner' as const,
+    type: 'homeowner' as CustomerType,
     notes: '',
     selectedTags: [] as string[],
-    newTag: ''
+    newTag: '',
   });
-  
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const formatPhoneNumber = (value: string) => {
+  const formatPhone = (value: string) => {
     const cleaned = value.replace(/\D/g, '');
     if (cleaned.length <= 3) return cleaned;
     if (cleaned.length <= 6) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
@@ -31,280 +38,238 @@ export const NewCustomer = () => {
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhoneNumber(e.target.value);
+    const formatted = formatPhone(e.target.value);
     if (formatted.replace(/\D/g, '').length <= 10) {
-      setFormData(prev => ({ ...prev, phone: formatted }));
+      setForm(p => ({ ...p, phone: formatted }));
     }
   };
 
   const toggleTag = (tag: string) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedTags: prev.selectedTags.includes(tag)
-        ? prev.selectedTags.filter(t => t !== tag)
-        : [...prev.selectedTags, tag]
+    setForm(p => ({
+      ...p,
+      selectedTags: p.selectedTags.includes(tag)
+        ? p.selectedTags.filter(t => t !== tag)
+        : [...p.selectedTags, tag],
     }));
   };
 
   const addNewTag = () => {
-    if (formData.newTag && !formData.selectedTags.includes(formData.newTag)) {
-      setFormData(prev => ({
-        ...prev,
-        selectedTags: [...prev.selectedTags, prev.newTag],
-        newTag: ''
-      }));
-      addTag(formData.newTag);
+    const trimmed = form.newTag.trim();
+    if (trimmed && !form.selectedTags.includes(trimmed)) {
+      setForm(p => ({ ...p, selectedTags: [...p.selectedTags, trimmed], newTag: '' }));
+      if (!tags.includes(trimmed)) {
+        addTag(trimmed);
+      }
     }
   };
 
   const validate = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-    if (!formData.phone.replace(/\D/g, '').trim()) newErrors.phone = 'Phone number is required';
-    if (!formData.address.trim()) newErrors.address = 'Address is required';
-    if (!formData.city.trim()) newErrors.city = 'City is required';
-    if (!formData.state.trim()) newErrors.state = 'State is required';
-    if (!formData.zipCode.trim()) newErrors.zipCode = 'ZIP code is required';
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const e: Record<string, string> = {};
+    if (!form.firstName.trim()) e.firstName = 'First name is required';
+    if (!form.lastName.trim()) e.lastName = 'Last name is required';
+    const phoneDigits = form.phone.replace(/\D/g, '');
+    if (!phoneDigits) e.phone = 'Phone number is required';
+    else if (phoneDigits.length !== 10) e.phone = 'Phone number must be 10 digits';
+    if (!form.address.trim()) e.address = 'Street address is required';
+    if (!form.city.trim()) e.city = 'City is required';
+    if (!form.state.trim()) e.state = 'State is required';
+    if (!form.zipCode.trim()) e.zipCode = 'ZIP code is required';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!validate()) return;
-    
+
     const customer = addCustomer({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      phone: formData.phone,
-      email: formData.email || undefined,
-      address: formData.address,
-      city: formData.city,
-      state: formData.state,
-      zipCode: formData.zipCode,
-      notes: formData.notes || undefined,
-      tags: formData.selectedTags,
-      type: formData.type,
-      status: 'active'
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      phone: form.phone,
+      email: form.email.trim() || undefined,
+      address: form.address.trim(),
+      city: form.city.trim(),
+      state: form.state.trim(),
+      zipCode: form.zipCode.trim(),
+      notes: form.notes.trim() || undefined,
+      tags: form.selectedTags,
+      type: form.type,
+      status: 'active',
     });
-    
+
     navigate(`/customers/${customer.id}`);
   };
 
-  const typeConfig = {
-    'homeowner': { emoji: '🏠', label: 'Homeowner' },
-    'contractor': { emoji: '🔨', label: 'Contractor' },
-    'property-manager': { emoji: '🏢', label: 'Property Mgr' },
-    'commercial': { emoji: '🏬', label: 'Commercial' }
-  };
-
   return (
-    <div className="min-h-screen bg-slate-950 pb-24">
-      {/* Header */}
-      <header className="app-header px-5 py-4 sticky top-0 z-50">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => navigate('/customers')}
-            className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center text-xl font-medium"
-          >
-            ‹
-          </button>
-          <h1 className="font-bold text-white text-lg">New Customer</h1>
-        </div>
-      </header>
-
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="p-5 space-y-4">
+    <Layout showBack title="New Customer">
+      <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4 pb-8">
         {/* Name */}
-        <div className="app-card space-y-4">
-          <h2 className="section-title">Name</h2>
-          
+        <Card>
+          <h3 className="text-sm font-semibold text-white uppercase tracking-wide mb-4">Name</h3>
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <input
-                type="text"
-                value={formData.firstName}
-                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                className={`w-full input-field ${errors.firstName ? 'border-red-500' : ''}`}
-                placeholder="First name"
-              />
-              {errors.firstName && <p className="text-red-400 text-xs mt-1">{errors.firstName}</p>}
-            </div>
-            <div>
-              <input
-                type="text"
-                value={formData.lastName}
-                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                className={`w-full input-field ${errors.lastName ? 'border-red-500' : ''}`}
-                placeholder="Last name"
-              />
-              {errors.lastName && <p className="text-red-400 text-xs mt-1">{errors.lastName}</p>}
-            </div>
+            <Input
+              label="First Name"
+              value={form.firstName}
+              onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))}
+              placeholder="First name"
+              error={!!errors.firstName}
+              helperText={errors.firstName}
+            />
+            <Input
+              label="Last Name"
+              value={form.lastName}
+              onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))}
+              placeholder="Last name"
+              error={!!errors.lastName}
+              helperText={errors.lastName}
+            />
           </div>
-        </div>
+        </Card>
 
         {/* Contact */}
-        <div className="app-card space-y-4">
-          <h2 className="section-title">Contact</h2>
-          
-          <div>
-            <input
+        <Card>
+          <h3 className="text-sm font-semibold text-white uppercase tracking-wide mb-4">Contact</h3>
+          <div className="space-y-3">
+            <Input
+              label="Phone"
               type="tel"
-              value={formData.phone}
+              value={form.phone}
               onChange={handlePhoneChange}
-              className={`w-full input-field ${errors.phone ? 'border-red-500' : ''}`}
-              placeholder="Phone number"
+              placeholder="(555) 123-4567"
+              error={!!errors.phone}
+              helperText={errors.phone}
             />
-            {errors.phone && <p className="text-red-400 text-xs mt-1">{errors.phone}</p>}
-          </div>
-          
-          <div>
-            <input
+            <Input
+              label="Email (optional)"
               type="email"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              className="w-full input-field"
-              placeholder="Email (optional)"
+              value={form.email}
+              onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+              placeholder="email@example.com"
             />
           </div>
-        </div>
+        </Card>
 
         {/* Address */}
-        <div className="app-card space-y-4">
-          <h2 className="section-title">Address</h2>
-          
-          <div>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-              className={`w-full input-field ${errors.address ? 'border-red-500' : ''}`}
-              placeholder="Street address"
+        <Card>
+          <h3 className="text-sm font-semibold text-white uppercase tracking-wide mb-4">Address</h3>
+          <div className="space-y-3">
+            <Input
+              label="Street Address"
+              value={form.address}
+              onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
+              placeholder="123 Main St"
+              error={!!errors.address}
+              helperText={errors.address}
             />
-            {errors.address && <p className="text-red-400 text-xs mt-1">{errors.address}</p>}
-          </div>
-          
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2">
-              <input
-                type="text"
-                value={formData.city}
-                onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                className={`w-full input-field ${errors.city ? 'border-red-500' : ''}`}
+            <div className="grid grid-cols-[1fr_80px_100px] gap-3">
+              <Input
+                label="City"
+                value={form.city}
+                onChange={e => setForm(p => ({ ...p, city: e.target.value }))}
                 placeholder="City"
+                error={!!errors.city}
+                helperText={errors.city}
               />
-              {errors.city && <p className="text-red-400 text-xs mt-1">{errors.city}</p>}
-            </div>
-            <div>
-              <input
-                type="text"
-                value={formData.state}
-                onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                className={`w-full input-field ${errors.state ? 'border-red-500' : ''}`}
-                placeholder="State"
+              <Input
+                label="State"
+                value={form.state}
+                onChange={e => setForm(p => ({ ...p, state: e.target.value.toUpperCase() }))}
+                placeholder="OH"
+                maxLength={2}
+                error={!!errors.state}
+                helperText={errors.state}
               />
-              {errors.state && <p className="text-red-400 text-xs mt-1">{errors.state}</p>}
+              <Input
+                label="ZIP"
+                value={form.zipCode}
+                onChange={e => setForm(p => ({ ...p, zipCode: e.target.value }))}
+                placeholder="44145"
+                error={!!errors.zipCode}
+                helperText={errors.zipCode}
+              />
             </div>
           </div>
-          
-          <div>
-            <input
-              type="text"
-              value={formData.zipCode}
-              onChange={(e) => setFormData(prev => ({ ...prev, zipCode: e.target.value }))}
-              className={`w-full input-field ${errors.zipCode ? 'border-red-500' : ''}`}
-              placeholder="ZIP code"
-            />
-            {errors.zipCode && <p className="text-red-400 text-xs mt-1">{errors.zipCode}</p>}
-          </div>
-        </div>
+        </Card>
 
         {/* Customer Type */}
-        <div className="app-card space-y-4">
-          <h2 className="section-title">Customer Type</h2>
-          
-          <div className="grid grid-cols-2 gap-2">
-            {(Object.keys(typeConfig) as Array<keyof typeof typeConfig>).map((type) => (
+        <Card>
+          <h3 className="text-sm font-semibold text-white uppercase tracking-wide mb-4">Customer Type</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {(Object.keys(typeConfig) as CustomerType[]).map(type => (
               <button
                 key={type}
                 type="button"
-                onClick={() => setFormData(prev => ({ ...prev, type: type as any }))}
-                className={`p-3 rounded-xl text-sm font-medium border-2 transition-all text-left flex items-center gap-2 ${
-                  formData.type === type
+                onClick={() => setForm(p => ({ ...p, type }))}
+                className={`p-4 rounded-xl text-sm font-medium border-2 transition-all text-left flex items-center gap-3 ${
+                  form.type === type
                     ? 'border-blue-500 bg-blue-500/10 text-white'
-                    : 'border-slate-700 text-slate-400 hover:border-slate-600'
+                    : 'border-slate-700/50 bg-slate-800/30 text-slate-400 hover:border-slate-600 hover:bg-slate-800/50'
                 }`}
               >
-                <span>{typeConfig[type].emoji}</span>
+                <span className="text-2xl">{typeConfig[type].emoji}</span>
                 <span>{typeConfig[type].label}</span>
               </button>
             ))}
           </div>
-        </div>
+        </Card>
 
         {/* Tags */}
-        <div className="app-card space-y-4">
-          <h2 className="section-title">Tags</h2>
-          
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => toggleTag(tag)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  formData.selectedTags.includes(tag)
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                }`}
-              >
-                #{tag}
-              </button>
-            ))}
-          </div>
-          
+        <Card>
+          <h3 className="text-sm font-semibold text-white uppercase tracking-wide mb-4">Tags</h3>
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {tags.map(tag => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => toggleTag(tag)}
+                  className={`px-3 py-2 rounded-full text-sm font-medium transition-colors ${
+                    form.selectedTags.includes(tag)
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-slate-800/60 text-slate-400 hover:bg-slate-700/60'
+                  }`}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex gap-2">
-            <input
-              type="text"
-              value={formData.newTag}
-              onChange={(e) => setFormData(prev => ({ ...prev, newTag: e.target.value }))}
-              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addNewTag())}
-              className="flex-1 input-field py-2"
+            <Input
+              value={form.newTag}
+              onChange={e => setForm(p => ({ ...p, newTag: e.target.value }))}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addNewTag();
+                }
+              }}
               placeholder="Add custom tag..."
             />
-            <button
-              type="button"
-              onClick={addNewTag}
-              className="btn-primary py-2 px-4 text-lg"
-            >
-              +
-            </button>
+            <Button size="sm" type="button" onClick={addNewTag}>
+              Add
+            </Button>
           </div>
-        </div>
+        </Card>
 
         {/* Notes */}
-        <div className="app-card space-y-4">
-          <h2 className="section-title">Notes</h2>
-          
+        <Card>
+          <h3 className="text-sm font-semibold text-white uppercase tracking-wide mb-4">Notes</h3>
           <textarea
-            value={formData.notes}
-            onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-            className="w-full input-field min-h-[100px]"
+            value={form.notes}
+            onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
             placeholder="Add any notes about this customer..."
+            className="w-full bg-slate-800/50 border-2 border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none min-h-[100px] resize-none"
           />
-        </div>
+        </Card>
 
         {/* Submit */}
-        <div className="pt-4 pb-8">
-          <button type="submit" className="w-full btn-primary py-4 text-lg font-semibold">
+        <div className="pt-4">
+          <Button type="submit" fullWidth size="lg">
             Create Customer
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Layout>
   );
 };

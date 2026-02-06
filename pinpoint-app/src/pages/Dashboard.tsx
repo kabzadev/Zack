@@ -1,212 +1,182 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useCustomerStore } from '../stores/customerStore';
 import { useEstimateStore } from '../stores/estimateStore';
-import { useNavigate } from 'react-router-dom';
+import { Layout, Card, StatCard, Badge } from '../components';
+import { Users, FileText, DollarSign, UserCheck, Plus, Mic, ChevronRight, LogOut } from 'lucide-react';
 
 export const Dashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const { getRecentCustomers, customers } = useCustomerStore();
-  const { estimates } = useEstimateStore();
-  
-  const recentCustomers = getRecentCustomers(5);
-  const totalCustomers = customers.length;
-  const totalEstimates = estimates.length;
+  const { customers } = useCustomerStore();
+  const { estimates, getRecentEstimates } = useEstimateStore();
+
+  const recentEstimates = getRecentEstimates(5);
+  const recentCustomers = customers
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 3);
+
+  const totalValue = estimates.reduce((sum, est) => sum + est.total, 0);
   const activeCustomers = customers.filter(c => c.status === 'active').length;
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+
+  const statusBadge = (status: string) => {
+    const map: Record<string, 'success' | 'warning' | 'info' | 'neutral' | 'error'> = {
+      approved: 'success', sent: 'info', draft: 'neutral', rejected: 'error', expired: 'warning',
+    };
+    return <Badge variant={map[status] || 'neutral'} size="sm">{status}</Badge>;
   };
 
-  const getTotalEstimateValue = () => {
-    return estimates.reduce((sum, est) => sum + est.total, 0);
+  const typeEmoji: Record<string, string> = {
+    homeowner: '🏠', contractor: '🔨', 'property-manager': '🏢', commercial: '🏬',
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-28">
+    <Layout>
       {/* Header */}
       <header className="app-header px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg">
-            <span className="text-slate-900 text-xl font-bold">◆</span>
+          <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-white/10">
+            <span className="text-slate-900 text-2xl font-bold">◆</span>
           </div>
           <div className="flex-1">
-            <h1 className="font-bold text-white text-lg">Pinpoint Painting</h1>
-            <p className="text-xs text-slate-400">Professional Estimating</p>
+            <h1 className="font-bold text-white text-lg tracking-tight">Pinpoint Painting</h1>
+            <p className="text-xs text-slate-500 font-medium">Professional Estimating</p>
           </div>
           <button
             onClick={logout}
-            className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center text-lg"
+            className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-500 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center"
           >
-            ↵
+            <LogOut size={18} />
           </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="px-5 py-6 space-y-6">
-        {/* Welcome Section */}
+      <div className="px-5 py-6 space-y-6">
+        {/* Welcome */}
         <div className="animate-fade-in-up">
-          <h2 className="text-3xl font-bold text-white mb-1">
+          <h2 className="text-3xl font-bold text-white mb-1 tracking-tight">
             Hey {user?.name?.split(' ')[0] || 'there'}!
           </h2>
           <p className="text-slate-400">Ready to create some estimates?</p>
         </div>
 
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="app-card app-card-hover animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                <span className="text-xl">👥</span>
-              </div>
-            </div>
-            <p className="text-3xl font-bold text-white mb-1">{totalCustomers}</p>
-            <p className="text-sm text-slate-400">Customers</p>
-          </div>
-          
-          <div className="app-card app-card-hover animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
-                <span className="text-xl">📋</span>
-              </div>
-            </div>
-            <p className="text-3xl font-bold text-white mb-1">{totalEstimates}</p>
-            <p className="text-sm text-slate-400">Estimates</p>
-          </div>
-        </div>
-
-        {/* Total Value Card */}
-        <div className="app-card app-card-hover animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-slate-400 mb-1">Total Estimate Value</p>
-              <p className="text-3xl font-bold text-gradient">
-                {formatCurrency(getTotalEstimateValue())}
-              </p>
-            </div>
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
-              <span className="text-2xl">💰</span>
-            </div>
-          </div>
-          <div className="mt-4 pt-4 border-t border-slate-800/50">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              <span className="text-xs text-slate-400">{activeCustomers} active customers</span>
-            </div>
-          </div>
+        {/* Stats */}
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard icon={<Users size={22} />} iconBg="bg-blue-500/20" iconColor="text-blue-400" value={customers.length} label="Customers" animationDelay={50} />
+          <StatCard icon={<FileText size={22} />} iconBg="bg-green-500/20" iconColor="text-green-400" value={estimates.length} label="Estimates" animationDelay={100} />
+          <StatCard icon={<DollarSign size={22} />} iconBg="bg-purple-500/20" iconColor="text-purple-400" value={fmt(totalValue)} label="Total Value" animationDelay={150} />
+          <StatCard icon={<UserCheck size={22} />} iconBg="bg-amber-500/20" iconColor="text-amber-400" value={activeCustomers} label="Active" animationDelay={200} />
         </div>
 
         {/* Quick Actions */}
-        <div className="animate-fade-in-up" style={{ animationDelay: '0.25s' }}>
-          <h3 className="section-title mb-4">Quick Actions</h3>
+        <div className="animate-fade-in-up" style={{ animationDelay: '250ms' }}>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Quick Actions</p>
           <div className="space-y-3">
-            <button 
-              onClick={() => navigate('/customers/new')}
-              className="w-full app-card app-card-hover flex items-center gap-4 group"
-            >
-              <div className="w-12 h-12 rounded-xl bg-white text-slate-900 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform text-2xl font-light">
-                +
+            <Card variant="clickable" onClick={() => navigate('/estimates/new')}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/25">
+                  <Mic size={22} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-white">New Estimate</p>
+                  <p className="text-sm text-slate-400">Voice-powered estimating</p>
+                </div>
+                <ChevronRight size={20} className="text-slate-600" />
               </div>
-              <div className="text-left flex-1">
-                <p className="font-semibold text-white">New Customer</p>
-                <p className="text-sm text-slate-400">Add a customer and create estimate</p>
-              </div>
-              <span className="text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all text-xl">›</span>
-            </button>
+            </Card>
 
-            <button 
-              onClick={() => navigate('/customers')}
-              className="w-full app-card app-card-hover flex items-center gap-4 group"
-            >
-              <div className="w-12 h-12 rounded-xl bg-slate-800 text-white flex items-center justify-center group-hover:bg-slate-700 transition-colors text-xl">
-                📋
+            <Card variant="clickable" onClick={() => navigate('/customers/new')}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white text-slate-900 flex items-center justify-center shadow-lg shadow-white/10">
+                  <Plus size={22} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-white">New Customer</p>
+                  <p className="text-sm text-slate-400">Add to your database</p>
+                </div>
+                <ChevronRight size={20} className="text-slate-600" />
               </div>
-              <div className="text-left flex-1">
-                <p className="font-semibold text-white">View Customers</p>
-                <p className="text-sm text-slate-400">Browse and manage customers</p>
+            </Card>
+
+            <Card variant="clickable" onClick={() => navigate('/customers')}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center">
+                  <Users size={22} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-white">View Customers</p>
+                  <p className="text-sm text-slate-400">Browse & manage</p>
+                </div>
+                <ChevronRight size={20} className="text-slate-600" />
               </div>
-              <span className="text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all text-xl">›</span>
-            </button>
+            </Card>
           </div>
         </div>
 
-        {/* Recent Customers */}
-        {recentCustomers.length > 0 && (
-          <div className="animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="section-title">Recent Customers</h3>
-              <button 
-                onClick={() => navigate('/customers')}
-                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-              >
+        {/* Recent Estimates */}
+        {recentEstimates.length > 0 && (
+          <div className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Recent Estimates</p>
+              <button onClick={() => navigate('/estimates')} className="text-sm text-blue-400 hover:text-blue-300 font-medium transition-colors">
                 See all →
               </button>
             </div>
-            <div className="space-y-3">
-              {recentCustomers.map((customer, index) => (
-                <div 
-                  key={customer.id}
-                  onClick={() => navigate(`/customers/${customer.id}`)}
-                  className="app-card app-card-hover flex items-center gap-4 cursor-pointer"
-                  style={{ animationDelay: `${0.35 + index * 0.05}s` }}
-                >
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
-                    <span className="text-lg font-semibold text-white">
-                      {customer.firstName[0]}{customer.lastName[0]}
-                    </span>
+            <div className="space-y-2">
+              {recentEstimates.map((est, i) => (
+                <Card key={est.id} variant="clickable" padding="sm" onClick={() => navigate(`/estimates/new?customer=${est.customerId}`)}
+                  animationDelay={300 + i * 40}>
+                  <div className="flex items-center gap-3 p-1">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white text-sm truncate">{est.projectName}</p>
+                      <p className="text-xs text-slate-500 truncate">{est.customerName}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-semibold text-white text-sm">{fmt(est.total)}</p>
+                      {statusBadge(est.status)}
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-white truncate">
-                      {customer.firstName} {customer.lastName}
-                    </p>
-                    <p className="text-sm text-slate-400">
-                      {customer.city}, {customer.state}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-slate-400">{customer.estimateCount}</p>
-                    <p className="text-xs text-slate-500">estimates</p>
-                  </div>
-                  <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
+                </Card>
               ))}
             </div>
           </div>
         )}
-      </main>
 
-      {/* Bottom Navigation */}
-      <nav className="nav-bar">
-        <button onClick={() => navigate('/')} className="flex flex-col items-center gap-1 p-2 text-white">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          <span className="text-xs font-medium">Home</span>
-        </button>
-        <button onClick={() => navigate('/customers')} className="flex flex-col items-center gap-1 p-2 text-slate-400 hover:text-white transition-colors">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <span className="text-xs font-medium">Customers</span>
-        </button>
-        {user?.role === 'admin' && (
-          <button onClick={() => navigate('/admin')} className="flex flex-col items-center gap-1 p-2 text-slate-400 hover:text-white transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span className="text-xs font-medium">Settings</span>
-          </button>
+        {/* Recent Customers */}
+        {recentCustomers.length > 0 && (
+          <div className="animate-fade-in-up" style={{ animationDelay: '350ms' }}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Recent Customers</p>
+              <button onClick={() => navigate('/customers')} className="text-sm text-blue-400 hover:text-blue-300 font-medium transition-colors">
+                See all →
+              </button>
+            </div>
+            <div className="space-y-2">
+              {recentCustomers.map((c, i) => (
+                <Card key={c.id} variant="clickable" padding="sm" onClick={() => navigate(`/customers/${c.id}`)}
+                  animationDelay={350 + i * 40}>
+                  <div className="flex items-center gap-3 p-1">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-lg flex-shrink-0">
+                      {typeEmoji[c.type] || '👤'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white text-sm truncate">{c.firstName} {c.lastName}</p>
+                      <p className="text-xs text-slate-500">{c.city}, {c.state}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-sm font-medium text-slate-400">{c.estimateCount}</p>
+                      <p className="text-xs text-slate-600">estimates</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
         )}
-      </nav>
-    </div>
+      </div>
+    </Layout>
   );
 };

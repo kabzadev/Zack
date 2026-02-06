@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// Types
 export type CustomerType = 'homeowner' | 'contractor' | 'property-manager' | 'commercial';
 export type CustomerStatus = 'active' | 'inactive' | 'prospect';
 
@@ -40,7 +41,6 @@ interface CustomerState {
   tags: string[];
   isLoading: boolean;
   
-  // Actions
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'estimateCount' | 'totalEstimateValue'>) => Customer;
   updateCustomer: (id: string, updates: Partial<Customer>) => void;
   deleteCustomer: (id: string) => void;
@@ -53,9 +53,15 @@ interface CustomerState {
   incrementEstimateCount: (customerId: string, value: number) => void;
 }
 
+// Helpers
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
-// Demo data for testing UI
+const isDemoMode = () => {
+  return typeof window !== 'undefined' && 
+    (localStorage.getItem('demoMode') === 'true' || window.location.search.includes('demo=true'));
+};
+
+// Demo data
 const demoCustomers: Customer[] = [
   {
     id: 'demo-1',
@@ -205,7 +211,6 @@ const demoCustomers: Customer[] = [
   }
 ];
 
-// Default tags for painting business
 const defaultTags = [
   'Interior',
   'Exterior',
@@ -219,13 +224,9 @@ const defaultTags = [
   'Custom Colors'
 ];
 
-// Check if demo mode is active
-const isDemoMode = typeof window !== 'undefined' && 
-  (localStorage.getItem('demoMode') === 'true' || window.location.search.includes('demo=true'));
+const initialCustomers = isDemoMode() ? demoCustomers : [];
 
-// Load demo customers if in demo mode
-const initialCustomers = isDemoMode ? demoCustomers : [];
-
+// Store
 export const useCustomerStore = create<CustomerState>()(
   persist(
     (set, get) => ({

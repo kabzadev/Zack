@@ -1,242 +1,257 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCustomerStore } from '../stores/customerStore';
+import { useEstimateStore } from '../stores/estimateStore';
+import { Layout, Card, Badge, Button, Modal, Input } from '../components';
+import { Phone, Mail, MapPin, Pencil, Check, Trash2, Plus, FileText, Tag as TagIcon } from 'lucide-react';
+
+const typeConfig: Record<string, { emoji: string; label: string }> = {
+  homeowner: { emoji: '🏠', label: 'Homeowner' },
+  contractor: { emoji: '🔨', label: 'Contractor' },
+  'property-manager': { emoji: '🏢', label: 'Property Manager' },
+  commercial: { emoji: '🏬', label: 'Commercial' },
+};
+
+const statusBadgeVariant = (status: string): 'success' | 'warning' | 'error' | 'info' | 'neutral' => {
+  const map: Record<string, 'success' | 'warning' | 'error' | 'info' | 'neutral'> = {
+    approved: 'success',
+    sent: 'info',
+    draft: 'neutral',
+    rejected: 'error',
+    expired: 'warning',
+  };
+  return map[status] || 'neutral';
+};
 
 export const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getCustomer, updateCustomer, deleteCustomer, tags, addTag } = useCustomerStore();
-  
-  const customer = id ? getCustomer(id) : undefined;
-  const [isEditing, setIsEditing] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [newTag, setNewTag] = useState('');
-  const [editedCustomer, setEditedCustomer] = useState(customer);
+  const { getEstimatesByCustomer } = useEstimateStore();
 
-  if (!customer) {
+  const customer = id ? getCustomer(id) : undefined;
+  const customerEstimates = id ? getEstimatesByCustomer(id) : [];
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [newTag, setNewTag] = useState('');
+  const [edited, setEdited] = useState(customer);
+
+  if (!customer || !edited) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-slate-400 mb-4">Customer not found</p>
-          <button
-            onClick={() => navigate('/customers')}
-            className="btn-primary"
-          >
-            Back to Customers
-          </button>
+      <Layout showBack title="Customer Not Found">
+        <div className="flex items-center justify-center min-h-[60vh] px-5">
+          <div className="text-center">
+            <p className="text-slate-400 mb-4">Customer not found</p>
+            <Button onClick={() => navigate('/customers')}>Back to Customers</Button>
+          </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
+  const type = typeConfig[customer.type] || { emoji: '👤', label: 'Customer' };
+
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(n);
+
   const handleSave = () => {
-    if (editedCustomer) {
-      updateCustomer(customer.id, editedCustomer);
+    if (edited && id) {
+      updateCustomer(id, edited);
       setIsEditing(false);
     }
   };
 
   const handleDelete = () => {
-    deleteCustomer(customer.id);
-    navigate('/customers');
+    if (id) {
+      deleteCustomer(id);
+      navigate('/customers');
+    }
   };
 
   const addCustomerTag = (tag: string) => {
-    if (tag && !editedCustomer?.tags.includes(tag)) {
-      setEditedCustomer(prev => prev ? {
-        ...prev,
-        tags: [...prev.tags, tag]
-      } : prev);
-      if (!tags.includes(tag)) {
-        addTag(tag);
+    const trimmed = tag.trim();
+    if (trimmed && !edited.tags.includes(trimmed)) {
+      setEdited(p => (p ? { ...p, tags: [...p.tags, trimmed] } : p));
+      if (!tags.includes(trimmed)) {
+        addTag(trimmed);
       }
     }
   };
 
   const removeCustomerTag = (tag: string) => {
-    setEditedCustomer(prev => prev ? {
-      ...prev,
-      tags: prev.tags.filter(t => t !== tag)
-    } : prev);
+    setEdited(p => (p ? { ...p, tags: p.tags.filter(t => t !== tag) } : p));
   };
 
-  const displayCustomer = isEditing ? editedCustomer : customer;
+  const display = isEditing ? edited : customer;
 
-  // Type config
-  const typeConfig = {
-    'homeowner': { emoji: '🏠', label: 'Homeowner' },
-    'contractor': { emoji: '🔨', label: 'Contractor' },
-    'property-manager': { emoji: '🏢', label: 'Property Manager' },
-    'commercial': { emoji: '🏬', label: 'Commercial' }
-  };
-
-  const type = typeConfig[customer.type];
+  const headerActions = (
+    <div className="flex gap-2">
+      <button
+        onClick={() => (isEditing ? handleSave() : (setEdited(customer), setIsEditing(true)))}
+        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+          isEditing
+            ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+            : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800'
+        }`}
+        aria-label={isEditing ? 'Save changes' : 'Edit customer'}
+      >
+        {isEditing ? <Check size={18} /> : <Pencil size={18} />}
+      </button>
+      <button
+        onClick={() => setShowDelete(true)}
+        className="w-10 h-10 rounded-xl bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-all flex items-center justify-center"
+        aria-label="Delete customer"
+      >
+        <Trash2 size={18} />
+      </button>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-24">
-      {/* Header */}
-      <header className="app-header px-5 py-4 sticky top-0 z-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => navigate('/customers')}
-              className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center text-xl font-medium"
+    <Layout showBack title={`${customer.firstName} ${customer.lastName}`} headerActions={headerActions}>
+      <div className="px-5 py-4 space-y-4 pb-8">
+        {/* Type & Status */}
+        <div className="flex items-center gap-3 py-2">
+          <span className="text-3xl">{type.emoji}</span>
+          <span className="text-slate-300 font-medium text-lg">{type.label}</span>
+          <div className="ml-auto">
+            <Badge
+              variant={
+                customer.status === 'active' ? 'success' : customer.status === 'prospect' ? 'warning' : 'neutral'
+              }
+              dot
             >
-              ‹
-            </button>
-            <div>
-              <h1 className="font-bold text-white text-lg">
-                {customer.firstName} {customer.lastName}
-              </h1>
-              <p className="text-sm text-slate-400">
-                {customer.estimateCount} estimates · ${customer.totalEstimateValue.toLocaleString()} total
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all text-lg ${
-                isEditing 
-                  ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' 
-                  : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              {isEditing ? '✓' : '✎'}
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all flex items-center justify-center text-lg"
-            >
-              🗑
-            </button>
+              {customer.status.charAt(0).toUpperCase() + customer.status.slice(1)}
+            </Badge>
           </div>
         </div>
-      </header>
 
-      {/* Content */}
-      <div className="p-5 space-y-4">
-        {/* Type Badge */}
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">{type.emoji}</span>
-          <span className="text-slate-300">{type.label}</span>
-          <span className={`ml-auto px-3 py-1 rounded-full text-xs font-medium ${
-            customer.status === 'active' ? 'bg-green-500/20 text-green-400' :
-            customer.status === 'prospect' ? 'bg-amber-500/20 text-amber-400' :
-            'bg-slate-700 text-slate-400'
-          }`}>
-            {customer.status.charAt(0).toUpperCase() + customer.status.slice(1)}
-          </span>
-        </div>
-
-        {/* Contact Info */}
-        <div className="app-card">
-          <h2 className="section-title mb-4">Contact Information</h2>
-          
+        {/* Contact */}
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-white uppercase tracking-wide flex items-center gap-2">
+              <Phone size={16} className="text-slate-400" />
+              Contact
+            </h3>
+          </div>
           <div className="space-y-4">
+            {/* Phone */}
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg">
-                📞
+              <div className="w-10 h-10 rounded-xl bg-slate-800/60 flex items-center justify-center flex-shrink-0">
+                <Phone size={18} className="text-slate-400" />
               </div>
               {isEditing ? (
-                <input
-                  type="tel"
-                  value={displayCustomer?.phone}
-                  onChange={(e) => setEditedCustomer(prev => prev ? { ...prev, phone: e.target.value } : prev)}
-                  className="flex-1 input-field"
+                <Input
+                  value={display.phone}
+                  onChange={e => setEdited(p => (p ? { ...p, phone: e.target.value } : p))}
+                  placeholder="Phone number"
                 />
               ) : (
-                <div>
-                  <p className="text-sm text-slate-500">Phone</p>
+                <div className="flex-1">
+                  <p className="text-xs text-slate-500 mb-0.5">Phone</p>
                   <p className="font-medium text-white">{customer.phone}</p>
                 </div>
               )}
             </div>
 
+            {/* Email */}
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg">
-                ✉️
+              <div className="w-10 h-10 rounded-xl bg-slate-800/60 flex items-center justify-center flex-shrink-0">
+                <Mail size={18} className="text-slate-400" />
               </div>
               {isEditing ? (
-                <input
-                  type="email"
-                  value={displayCustomer?.email || ''}
-                  onChange={(e) => setEditedCustomer(prev => prev ? { ...prev, email: e.target.value } : prev)}
-                  className="flex-1 input-field"
+                <Input
+                  value={display.email || ''}
+                  onChange={e => setEdited(p => (p ? { ...p, email: e.target.value } : p))}
                   placeholder="Email address"
+                  type="email"
                 />
               ) : (
-                <div>
-                  <p className="text-sm text-slate-500">Email</p>
+                <div className="flex-1">
+                  <p className="text-xs text-slate-500 mb-0.5">Email</p>
                   <p className="font-medium text-white">{customer.email || '—'}</p>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Address */}
-        <div className="app-card">
-          <h2 className="section-title mb-4">Address</h2>
-          
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-white uppercase tracking-wide flex items-center gap-2">
+              <MapPin size={16} className="text-slate-400" />
+              Address
+            </h3>
+          </div>
           {isEditing ? (
             <div className="space-y-3">
-              <input
-                type="text"
-                value={displayCustomer?.address}
-                onChange={(e) => setEditedCustomer(prev => prev ? { ...prev, address: e.target.value } : prev)}
-                className="w-full input-field"
+              <Input
+                value={display.address}
+                onChange={e => setEdited(p => (p ? { ...p, address: e.target.value } : p))}
                 placeholder="Street address"
               />
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={displayCustomer?.city}
-                  onChange={(e) => setEditedCustomer(prev => prev ? { ...prev, city: e.target.value } : prev)}
-                  className="flex-1 input-field"
+              <div className="grid grid-cols-[1fr_80px_100px] gap-3">
+                <Input
+                  value={display.city}
+                  onChange={e => setEdited(p => (p ? { ...p, city: e.target.value } : p))}
                   placeholder="City"
                 />
-                <input
-                  type="text"
-                  value={displayCustomer?.state}
-                  onChange={(e) => setEditedCustomer(prev => prev ? { ...prev, state: e.target.value } : prev)}
-                  className="w-20 input-field"
-                  placeholder="State"
+                <Input
+                  value={display.state}
+                  onChange={e => setEdited(p => (p ? { ...p, state: e.target.value } : p))}
+                  placeholder="ST"
                 />
-                <input
-                  type="text"
-                  value={displayCustomer?.zipCode}
-                  onChange={(e) => setEditedCustomer(prev => prev ? { ...prev, zipCode: e.target.value } : prev)}
-                  className="w-28 input-field"
+                <Input
+                  value={display.zipCode}
+                  onChange={e => setEdited(p => (p ? { ...p, zipCode: e.target.value } : p))}
                   placeholder="ZIP"
                 />
               </div>
             </div>
           ) : (
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg">
-                📍
+              <div className="w-10 h-10 rounded-xl bg-slate-800/60 flex items-center justify-center flex-shrink-0">
+                <MapPin size={18} className="text-slate-400" />
               </div>
-              <div>
-                <p className="font-medium text-white">{customer.address}</p>
-                <p className="text-slate-400">{customer.city}, {customer.state} {customer.zipCode}</p>
+              <div className="flex-1">
+                <p className="font-medium text-white leading-relaxed">{customer.address}</p>
+                <p className="text-slate-400 mt-1">
+                  {customer.city}, {customer.state} {customer.zipCode}
+                </p>
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Tags */}
-        <div className="app-card">
-          <h2 className="section-title mb-4">Tags</h2>
-          
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-white uppercase tracking-wide flex items-center gap-2">
+              <TagIcon size={16} className="text-slate-400" />
+              Tags
+            </h3>
+          </div>
           <div className="flex flex-wrap gap-2 mb-3">
-            {displayCustomer?.tags.map((tag) => (
-              <span key={tag} className="px-3 py-1 bg-slate-800 text-slate-300 rounded-full text-sm flex items-center gap-1">
+            {display.tags.length === 0 && !isEditing && (
+              <p className="text-slate-500 text-sm">No tags added</p>
+            )}
+            {display.tags.map(tag => (
+              <span
+                key={tag}
+                className="px-3 py-1.5 bg-slate-800/60 text-slate-300 rounded-full text-sm flex items-center gap-2"
+              >
                 #{tag}
                 {isEditing && (
                   <button
                     onClick={() => removeCustomerTag(tag)}
-                    className="text-slate-500 hover:text-red-400 ml-1"
+                    className="text-slate-500 hover:text-red-400 ml-1 text-base leading-none"
                   >
                     ×
                   </button>
@@ -244,98 +259,126 @@ export const CustomerDetail = () => {
               </span>
             ))}
           </div>
-          
           {isEditing && (
             <div className="flex gap-2">
-              <input
-                type="text"
+              <Input
                 value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={(e) => {
+                onChange={e => setNewTag(e.target.value)}
+                onKeyDown={e => {
                   if (e.key === 'Enter') {
+                    e.preventDefault();
                     addCustomerTag(newTag);
                     setNewTag('');
                   }
                 }}
-                className="flex-1 input-field py-2"
                 placeholder="Add tag..."
               />
-              <button
+              <Button
+                size="sm"
                 onClick={() => {
                   addCustomerTag(newTag);
                   setNewTag('');
                 }}
-                className="btn-primary py-2 px-4 text-lg"
               >
-                +
-              </button>
+                Add
+              </Button>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Notes */}
-        <div className="app-card">
-          <h2 className="section-title mb-4">Notes</h2>
-          
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Notes</h3>
+          </div>
           {isEditing ? (
             <textarea
-              value={displayCustomer?.notes || ''}
-              onChange={(e) => setEditedCustomer(prev => prev ? { ...prev, notes: e.target.value } : prev)}
-              className="w-full input-field min-h-[100px]"
-              placeholder="Add notes about this customer..."
+              value={display.notes || ''}
+              onChange={e => setEdited(p => (p ? { ...p, notes: e.target.value } : p))}
+              placeholder="Add notes..."
+              className="w-full bg-slate-800/50 border-2 border-slate-700/50 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none min-h-[100px] resize-none"
             />
           ) : (
-            <p className="text-slate-400">{customer.notes || 'No notes added.'}</p>
+            <p className="text-slate-400 leading-relaxed whitespace-pre-wrap">
+              {customer.notes || 'No notes added.'}
+            </p>
           )}
-        </div>
+        </Card>
 
         {/* Estimates */}
-        <div className="app-card">
-          <h2 className="section-title mb-4">Estimates</h2>
-          
-          <div className="text-center py-8">
-            <div className="text-5xl mb-3">📋</div>
-            {customer.estimateCount === 0 ? (
-              <p className="text-slate-400 mb-3">No estimates yet</p>
-            ) : (
-              <p className="text-slate-400 mb-3">{customer.estimateCount} estimates · ${customer.totalEstimateValue.toLocaleString()} total</p>
-            )}
-            <button
+        <Card>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-white uppercase tracking-wide flex items-center gap-2">
+              <FileText size={16} className="text-slate-400" />
+              Estimates ({customerEstimates.length})
+            </h3>
+            <Button
+              size="sm"
+              icon={<Plus size={16} />}
               onClick={() => navigate(`/estimates/new?customer=${customer.id}`)}
-              className="btn-primary"
             >
-              <span className="mr-2">+</span>
-              New Estimate
-            </button>
+              New
+            </Button>
           </div>
-        </div>
+          {customerEstimates.length === 0 ? (
+            <div className="text-center py-6">
+              <FileText size={32} className="text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400 text-sm mb-3">No estimates yet</p>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => navigate(`/estimates/new?customer=${customer.id}`)}
+              >
+                Create First Estimate
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {customerEstimates.map(est => (
+                <div
+                  key={est.id}
+                  onClick={() => navigate(`/estimates/new?customer=${customer.id}`)}
+                  className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors border border-slate-700/30"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-white text-sm truncate mb-1">{est.projectName}</p>
+                    <p className="text-xs text-slate-500">
+                      {new Date(est.updatedAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="font-semibold text-white text-sm mb-1">{fmt(est.total)}</p>
+                    <Badge variant={statusBadgeVariant(est.status)} size="sm">
+                      {est.status.charAt(0).toUpperCase() + est.status.slice(1)}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
       </div>
 
-      {/* Delete Confirmation */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="app-card max-w-sm w-full">
-            <h2 className="text-xl font-bold text-white mb-2">Delete Customer?</h2>
-            <p className="text-slate-400 mb-6">
-              This will permanently delete {customer.firstName} {customer.lastName} and all associated data.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex-1 bg-red-500 text-white font-semibold py-3 rounded-lg hover:bg-red-600 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
+      {/* Delete Modal */}
+      <Modal
+        isOpen={showDelete}
+        onClose={() => setShowDelete(false)}
+        title="Delete Customer?"
+        description={`This will permanently delete ${customer.firstName} ${customer.lastName} and all associated data.`}
+      >
+        <div className="flex gap-3 mt-6">
+          <Button variant="secondary" fullWidth onClick={() => setShowDelete(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" fullWidth onClick={handleDelete}>
+            Delete
+          </Button>
         </div>
-      )}
-    </div>
+      </Modal>
+    </Layout>
   );
 };
