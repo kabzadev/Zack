@@ -30,9 +30,9 @@ interface AuthState {
 // Helpers
 const getApiUrl = () => {
   if (window.location.hostname === '100.88.213.43') {
-    return 'http://100.88.213.43:3001/api';
+    return 'http://100.88.213.43:3002/api';
   }
-  return import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  return import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
 };
 
 const isDemoMode = () => {
