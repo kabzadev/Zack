@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEstimateStore, type MaterialItem, type LaborItem, materialPresets } from '../stores/estimateStore';
 import { useCustomerStore } from '../stores/customerStore';
 import { Layout, Button, Modal, Input, Card } from '../components';
-import { MapPin, Plus, X, FileText, Save } from 'lucide-react';
+import { EstimatePDF } from '../components/EstimatePDF';
+import { MapPin, Plus, X, FileText, Save, FileDown } from 'lucide-react';
 
 const categoryEmoji: Record<string, string> = {
   paint: '🎨',
@@ -35,6 +36,9 @@ export const EstimateBuilder = () => {
 
   const customer = customerId ? getCustomer(customerId) : null;
   const estimate = currentEstimate;
+
+  // PDF modal state
+  const [showPDFModal, setShowPDFModal] = useState(false);
 
   // Material form state
   const [showMaterialForm, setShowMaterialForm] = useState(false);
@@ -406,6 +410,14 @@ export const EstimateBuilder = () => {
               <Button
                 variant="secondary"
                 size="md"
+                icon={<FileDown size={18} />}
+                onClick={() => setShowPDFModal(true)}
+              >
+                PDF
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
                 icon={<FileText size={18} />}
                 onClick={() => navigate('/estimates/preview')}
               >
@@ -569,6 +581,19 @@ export const EstimateBuilder = () => {
             {editingLabor ? 'Update' : 'Add'}
           </Button>
         </div>
+      </Modal>
+
+      {/* PDF Generation Modal */}
+      <Modal
+        isOpen={showPDFModal}
+        onClose={() => setShowPDFModal(false)}
+        title="Generate Estimate PDF"
+      >
+        <EstimatePDF
+          estimate={estimate}
+          customer={customer}
+          onClose={() => setShowPDFModal(false)}
+        />
       </Modal>
     </Layout>
   );

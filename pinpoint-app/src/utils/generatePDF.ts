@@ -392,7 +392,7 @@ function drawTotals(
 
 function drawNotesSection(
   doc: jsPDF,
-  estimate: Estimate,
+  _estimate: Estimate,
   startY: number,
   pageWidth: number,
   margin: number
