@@ -12,6 +12,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onImageCapture, cl
   const [rotation, setRotation] = useState(0);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -181,7 +182,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onImageCapture, cl
             <span className="text-sm font-medium">Rotate</span>
           </button>
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => galleryInputRef.current?.click()}
             className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800/50 text-slate-300 hover:bg-slate-800 transition-all"
           >
             <Crop size={16} />
@@ -196,6 +197,14 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onImageCapture, cl
         </div>
         <input
           ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileInput}
+          className="hidden"
+        />
+        <input
+          ref={galleryInputRef}
           type="file"
           accept="image/*"
           onChange={handleFileInput}
@@ -237,7 +246,7 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onImageCapture, cl
               <span className="text-sm">Camera</span>
             </button>
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => galleryInputRef.current?.click()}
               className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-slate-800/80 text-white font-medium hover:bg-slate-800 transition-all border border-white/5 active:scale-[0.98]"
             >
               <Upload size={18} />
@@ -251,11 +260,20 @@ export const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onImageCapture, cl
           )}
         </div>
       </div>
+      {/* Camera input (with capture attribute — opens camera directly on mobile) */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
         capture="environment"
+        onChange={handleFileInput}
+        className="hidden"
+      />
+      {/* Gallery input (NO capture attribute — opens photo gallery/file picker) */}
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
         onChange={handleFileInput}
         className="hidden"
       />
