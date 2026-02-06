@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerStore, type CustomerFilters, type CustomerType, type CustomerStatus } from '../stores/customerStore';
 import { useEstimateStore } from '../stores/estimateStore';
-import { Layout, Card, Badge, SearchBar, EmptyState, PageHeader } from '../components';
-import { Plus } from 'lucide-react';
+import { Layout, Card, Badge, SearchBar, EmptyState, PageHeader, Modal } from '../components';
+import { Plus, Trash2 } from 'lucide-react';
 
 const typeConfig: Record<CustomerType, { emoji: string; label: string; gradient: string }> = {
   homeowner: { emoji: '🏠', label: 'Homeowner', gradient: 'from-blue-500/20 to-cyan-500/20' },
@@ -20,12 +20,20 @@ const statusConfig: Record<CustomerStatus, { variant: 'success' | 'warning' | 'n
 
 export const CustomerList = () => {
   const navigate = useNavigate();
-  const { customers, tags, searchCustomers } = useCustomerStore();
+  const { customers, tags, searchCustomers, deleteCustomer } = useCustomerStore();
   const { getEstimatesByCustomer } = useEstimateStore();
 
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<CustomerFilters>({ type: 'all', status: 'all', tags: [] });
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+
+  const handleDelete = useCallback(() => {
+    if (deleteTarget) {
+      deleteCustomer(deleteTarget.id);
+      setDeleteTarget(null);
+    }
+  }, [deleteTarget, deleteCustomer]);
 
   const filtered = useMemo(() => searchCustomers({ search, ...filters }), [search, filters, customers, searchCustomers]);
 
@@ -123,14 +131,16 @@ export const CustomerList = () => {
               const type = typeConfig[c.type];
               const status = statusConfig[c.status];
               return (
-                <Card key={c.id} variant="clickable" padding="sm" onClick={() => navigate(`/customers/${c.id}`)}
-                  animationDelay={i * 40}>
+                <Card key={c.id} padding="sm" animationDelay={i * 40}>
                   <div className="flex items-center gap-3.5 p-1">
-                    <div className={`rounded-2xl bg-gradient-to-br ${type.gradient} flex items-center justify-center flex-shrink-0`}
-                      style={{ width: 52, height: 52 }}>
+                    <div
+                      className={`rounded-2xl bg-gradient-to-br ${type.gradient} flex items-center justify-center flex-shrink-0 cursor-pointer`}
+                      style={{ width: 52, height: 52 }}
+                      onClick={() => navigate(`/customers/${c.id}`)}
+                    >
                       <span className="text-2xl">{type.emoji}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate(`/customers/${c.id}`)}>
                       <div className="flex items-center gap-2 mb-0.5">
                         <h3 className="font-semibold text-white truncate text-sm">{c.firstName} {c.lastName}</h3>
                         <Badge variant={status.variant} size="sm" showDot>{status.label}</Badge>
@@ -145,9 +155,18 @@ export const CustomerList = () => {
                         </div>
                       )}
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xl font-bold text-white">{getEstimatesByCustomer(c.id).length}</p>
-                      <p className="text-xs text-slate-600">estimates</p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="text-right cursor-pointer" onClick={() => navigate(`/customers/${c.id}`)}>
+                        <p className="text-xl font-bold text-white">{getEstimatesByCustomer(c.id).length}</p>
+                        <p className="text-xs text-slate-600">estimates</p>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: c.id, name: `${c.firstName} ${c.lastName}` }); }}
+                        className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-colors"
+                        aria-label="Delete customer"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
                 </Card>
@@ -164,6 +183,32 @@ export const CustomerList = () => {
       >
         <Plus size={24} strokeWidth={2.5} />
       </button>
+
+      {/* Delete Customer Modal */}
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete Customer"
+        size="sm"
+      >
+        <p className="text-slate-300 mb-6">
+          Are you sure you want to delete <strong className="text-white">{deleteTarget?.name}</strong>? This can't be undone.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setDeleteTarget(null)}
+            className="flex-1 px-4 py-3 rounded-xl bg-slate-800 text-slate-300 font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            className="flex-1 px-4 py-3 rounded-xl bg-red-500 text-white font-semibold"
+          >
+            Delete
+          </button>
+        </div>
+      </Modal>
     </Layout>
   );
 };

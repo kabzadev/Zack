@@ -65,10 +65,10 @@ export const Dashboard = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
-          <StatCard icon={<Users size={22} />} iconBg="bg-blue-500/20" iconColor="text-blue-400" value={customers.length} label="Customers" animationDelay={50} />
-          <StatCard icon={<FileText size={22} />} iconBg="bg-green-500/20" iconColor="text-green-400" value={estimates.length} label="Estimates" animationDelay={100} />
-          <StatCard icon={<DollarSign size={22} />} iconBg="bg-purple-500/20" iconColor="text-purple-400" value={fmt(totalValue)} label="Total Value" animationDelay={150} />
-          <StatCard icon={<UserCheck size={22} />} iconBg="bg-amber-500/20" iconColor="text-amber-400" value={activeCustomers} label="Active" animationDelay={200} />
+          <StatCard icon={<Users size={22} />} iconBg="bg-blue-500/20" iconColor="text-blue-400" value={customers.length} label="Customers" animationDelay={50} onClick={() => navigate('/customers')} />
+          <StatCard icon={<FileText size={22} />} iconBg="bg-green-500/20" iconColor="text-green-400" value={estimates.length} label="Estimates" animationDelay={100} onClick={() => navigate('/estimates')} />
+          <StatCard icon={<DollarSign size={22} />} iconBg="bg-purple-500/20" iconColor="text-purple-400" value={fmt(totalValue)} label="Total Value" animationDelay={150} onClick={() => navigate('/estimates')} />
+          <StatCard icon={<UserCheck size={22} />} iconBg="bg-amber-500/20" iconColor="text-amber-400" value={activeCustomers} label="Active" animationDelay={200} onClick={() => navigate('/customers')} />
         </div>
 
         {/* Quick Actions */}
