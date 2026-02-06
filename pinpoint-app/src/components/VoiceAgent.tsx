@@ -47,98 +47,211 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, draftId]);
 
-  // Extract structured data from conversation text
+  // Extract structured data from conversation text — handles natural speech
   const extractFields = useCallback((dId: string, entries: VoiceConversationEntry[]) => {
+    // Process user messages and agent messages separately for context
+    const userText = entries.filter(e => e.role === 'user').map(e => e.message).join(' ');
+    // Agent text available for future context matching
+    // const agentText = entries.filter(e => e.role === 'agent').map(e => e.message).join(' ');
     const allText = entries.map(t => t.message).join(' ');
     const allLower = allText.toLowerCase();
+    const userLower = userText.toLowerCase();
     const updates: Partial<VoiceDraft> = {};
 
-    // Customer name
-    const nameMatch = allText.match(/(?:for|customer(?:\s+is)?|name(?:\s+is)?|this is for|estimate for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/);
-    if (nameMatch) updates.customerName = nameMatch[1].trim();
+    // === Customer name ===
+    // Flexible: "John Smith", "for John", "it's for the Johnsons", "customer is Mike Davis"
+    // Also catch agent confirming: "Got it, John Smith"
+    const namePatterns = [
+      /(?:for|customer(?:\s+is)?|name(?:\s+is)?|this is for|estimate for|it'?s for)\s+(?:the\s+)?([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,2})/,
+      /(?:got it|okay|perfect),?\s+([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){0,2})/,
+      /^([A-Z][a-zA-Z'-]+(?:\s+[A-Z][a-zA-Z'-]+){1,2})$/m, // standalone name on its own line
+    ];
+    for (const pat of namePatterns) {
+      const m = allText.match(pat);
+      if (m) {
+        const name = m[1].trim();
+        // Filter out false positives (common non-name words)
+        const skip = ['Interior', 'Exterior', 'Duration', 'SuperPaint', 'Emerald', 'Sherwin', 'Williams', 'Pinpoint', 'Hey', 'Sure', 'Okay', 'Perfect'];
+        if (!skip.includes(name.split(' ')[0])) {
+          updates.customerName = name;
+          break;
+        }
+      }
+    }
 
-    // Address
-    const addrMatch = allText.match(/(\d+\s+[\w\s]+(?:Street|St|Avenue|Ave|Drive|Dr|Road|Rd|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl)[\w\s,]*(?:,\s*\w[\w\s]*)?)/i);
-    if (addrMatch) updates.propertyAddress = addrMatch[1].trim();
+    // === Address ===
+    // Flexible: "123 Main Street", "the address is 456 Oak Ave Apt 2", spoken numbers
+    const addrPatterns = [
+      /(\d+\s+[\w\s]+(?:Street|St|Avenue|Ave|Drive|Dr|Road|Rd|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl|Circle|Cir|Terrace|Ter|Trail|Trl|Pike|Highway|Hwy|Parkway|Pkwy)[\w\s,#.]*)/i,
+      /address\s+(?:is\s+)?(\d+[\w\s,#.]+)/i,
+      /(?:at|on|lives?\s+(?:at|on))\s+(\d+[\w\s,#.]+(?:Street|St|Avenue|Ave|Drive|Dr|Road|Rd|Lane|Ln|Blvd|Court|Ct|Way|Place|Pl)[\w\s,#.]*)/i,
+    ];
+    for (const pat of addrPatterns) {
+      const m = allText.match(pat);
+      if (m) {
+        updates.propertyAddress = m[1].trim().replace(/\s+/g, ' ');
+        break;
+      }
+    }
 
-    // Project type
-    if (allLower.includes('interior') && allLower.includes('exterior')) updates.projectType = 'both';
-    else if (allLower.includes('exterior')) updates.projectType = 'exterior';
-    else if (allLower.includes('interior')) updates.projectType = 'interior';
+    // === Project type ===
+    // Check user text first to avoid agent questions being matched
+    const typeText = userLower || allLower;
+    if (typeText.includes('interior') && typeText.includes('exterior')) updates.projectType = 'both';
+    else if (/\b(?:outside|exterior)\b/.test(typeText)) updates.projectType = 'exterior';
+    else if (/\b(?:inside|interior)\b/.test(typeText)) updates.projectType = 'interior';
 
-    // Areas/rooms
-    const roomNames = ['living room', 'kitchen', 'hallway', 'master bedroom', 'bedroom', 'bathroom',
-      'dining room', 'family room', 'basement', 'garage', 'foyer', 'laundry', 'office',
-      'exterior body', 'trim', 'front door', 'back door', 'ceiling', 'accent wall'];
+    // === Areas/rooms ===
+    const roomNames = [
+      'living room', 'kitchen', 'hallway', 'hall', 'master bedroom', 'master bath',
+      'bedroom', 'bathroom', 'bath', 'dining room', 'family room', 'great room',
+      'basement', 'garage', 'foyer', 'entryway', 'entry', 'laundry', 'laundry room',
+      'office', 'den', 'bonus room', 'sunroom', 'sun room', 'porch', 'deck',
+      'exterior body', 'exterior', 'trim', 'front door', 'back door', 'doors',
+      'shutters', 'siding', 'fascia', 'soffit', 'eaves',
+      'ceiling', 'ceilings', 'accent wall', 'stairway', 'stairwell', 'closet',
+      'nursery', 'playroom', 'mudroom', 'mud room', 'pantry',
+      'whole house', 'entire house', 'all rooms', 'throughout',
+    ];
     const areas: string[] = [];
     for (const room of roomNames) {
       if (allLower.includes(room) && !areas.includes(room)) areas.push(room);
     }
     if (areas.length > 0) updates.areas = areas;
 
-    // Number of rooms
-    const roomCountMatch = allLower.match(/(\d+)\s*(?:rooms?|bedrooms?|areas?)/);
+    // Room count: "5 rooms", "three bedrooms"
+    const wordNums: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+    const roomCountMatch = allLower.match(/(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:rooms?|bedrooms?|areas?|bathrooms?)/);
     if (roomCountMatch && areas.length === 0) {
-      updates.areas = [`${roomCountMatch[1]} rooms`];
+      const n = wordNums[roomCountMatch[1]] || parseInt(roomCountMatch[1], 10);
+      if (n) updates.areas = [`${n} rooms`];
     }
 
-    // Painters
-    const painterMatch = allLower.match(/(\d+)\s*(?:guys?|painters?|men|crew|people)/);
-    if (painterMatch) updates.numberOfPainters = parseInt(painterMatch[1], 10);
+    // === Painters ===
+    // "2 guys", "three painters", "me and one other guy", "just me", "a crew of 4"
+    const painterPatterns = [
+      /(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:guys?|painters?|men|people|workers?|crew\s*(?:members?)?)/i,
+      /crew\s*(?:of|size)?\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)/i,
+      /(?:just me|myself|solo|alone|one man)/i,
+      /(?:me and|myself and)\s*(\d+|one|two|three|four)/i,
+    ];
+    for (const pat of painterPatterns) {
+      const m = allLower.match(pat);
+      if (m) {
+        if (/just me|myself|solo|alone|one man/.test(m[0])) {
+          updates.numberOfPainters = 1;
+        } else if (/me and|myself and/.test(m[0])) {
+          const extra = wordNums[m[1]] || parseInt(m[1], 10);
+          updates.numberOfPainters = 1 + (extra || 1);
+        } else {
+          updates.numberOfPainters = wordNums[m[1]] || parseInt(m[1], 10);
+        }
+        break;
+      }
+    }
 
-    // Days
-    const daysMatch = allLower.match(/(\d+(?:\.\d+)?)\s*days?/);
-    if (daysMatch) updates.estimatedDays = parseFloat(daysMatch[1]);
+    // === Days ===
+    // "3 days", "about a week", "two and a half days", "a day and a half"
+    const dayPatterns = [
+      /(\d+(?:\.\d+)?)\s*days?/i,
+      /(one|two|three|four|five|six|seven|eight|nine|ten)\s*days?/i,
+      /(?:a|one)\s*(?:day\s*and\s*a\s*half|and\s*a\s*half\s*days?)/i,
+      /(?:about\s*)?(?:a|one)\s*week/i,
+      /half\s*(?:a\s*)?day/i,
+    ];
+    for (const pat of dayPatterns) {
+      const m = allLower.match(pat);
+      if (m) {
+        if (/day and a half|half days/.test(m[0])) {
+          updates.estimatedDays = 1.5;
+        } else if (/week/.test(m[0])) {
+          updates.estimatedDays = 5;
+        } else if (/half a day|half day/.test(m[0])) {
+          updates.estimatedDays = 0.5;
+        } else {
+          updates.estimatedDays = wordNums[m[1]] || parseFloat(m[1]);
+        }
+        break;
+      }
+    }
 
-    // Hours per day
-    const hrsMatch = allLower.match(/(\d+)\s*hours?\s*(?:per|a)\s*day/);
+    // === Hours per day ===
+    const hrsMatch = allLower.match(/(\d+)\s*hours?\s*(?:per|a|each)\s*day/);
     if (hrsMatch) updates.hoursPerDay = parseInt(hrsMatch[1], 10);
 
-    // Rate
-    const rateMatch = allLower.match(/(?:\$)?(\d+)\s*(?:an hour|per hour|\/hr|hourly|\/hour)/);
-    if (rateMatch) updates.hourlyRate = parseInt(rateMatch[1], 10);
+    // === Rate ===
+    // "$65 an hour", "65 per hour", "hourly rate is 70", "charging 55 an hour"
+    const ratePatterns = [
+      /\$?\s*(\d+)\s*(?:an?\s*hour|per\s*hour|\/\s*h(?:ou)?r|hourly|\/\s*hour)/i,
+      /(?:hourly\s*)?rate\s*(?:is|of|at)?\s*\$?\s*(\d+)/i,
+      /(?:charg(?:e|ing))\s*\$?\s*(\d+)\s*(?:an?\s*hour|per\s*hour|hourly)?/i,
+    ];
+    for (const pat of ratePatterns) {
+      const m = allLower.match(pat);
+      if (m) {
+        const rate = parseInt(m[1], 10);
+        if (rate >= 20 && rate <= 200) { // sanity check
+          updates.hourlyRate = rate;
+          break;
+        }
+      }
+    }
 
-    // Square footage
-    const sqftMatch = allLower.match(/(\d[\d,]*)\s*(?:square\s*(?:feet|foot|ft)|sq\s*(?:ft|feet)|sqft)/);
+    // === Square footage ===
+    const sqftMatch = allLower.match(/(\d[\d,]*)\s*(?:square\s*(?:feet|foot|ft)|sq\.?\s*(?:ft|feet)|sqft)/);
     if (sqftMatch) {
-      // Store as an area note
       const sqft = parseInt(sqftMatch[1].replace(/,/g, ''), 10);
       if (!updates.areas) updates.areas = [];
       const sqftNote = `~${sqft.toLocaleString()} sq ft`;
       if (!updates.areas.includes(sqftNote)) updates.areas.push(sqftNote);
     }
 
-    // Paint products & gallons
+    // === Paint products & gallons ===
     const productPrices: Record<string, number> = {
       'duration': 75, 'duration home': 65, 'superpaint': 55, 'super paint': 55,
       'emerald': 85, 'proclassic': 70, 'pro classic': 70, 'problock': 45,
       'primer': 45, 'pro block': 45,
     };
     
-    const gallonRegex = /(\d+)\s*gallons?\s*(?:of\s+)?(?:(duration home|duration|superpaint|super paint|emerald|proclassic|pro classic|problock|pro block|primer))?(?:\s+(?:for\s+)?(?:the\s+)?(exterior|interior|body|trim|doors?|ceiling|walls?|accent))?/gi;
+    // More flexible: "10 gallons of Duration", "Duration 10 gallons", "we need 5 gallons"
+    const gallonPatterns = [
+      /(\d+)\s*gallons?\s*(?:of\s+)?(?:(?:the\s+)?(?:sherwin[- ]?williams\s+)?)?(duration home|duration|superpaint|super paint|emerald|proclassic|pro classic|problock|pro block|primer|paint)?(?:\s+(?:for|on|in)\s+(?:the\s+)?([\w\s]+?))?(?:[.,]|$)/gi,
+      /(duration home|duration|superpaint|super paint|emerald|proclassic|pro classic|problock|pro block|primer)\s+(\d+)\s*gallons?/gi,
+    ];
+    
     const paintItems = [...(store.getDraftById(dId)?.paintItems || [])];
-    let gallonMatch;
-    while ((gallonMatch = gallonRegex.exec(allLower)) !== null) {
-      const gallons = parseInt(gallonMatch[1], 10);
-      const product = gallonMatch[2] || 'paint';
-      const area = gallonMatch[3] || 'general';
-      // Avoid duplicates
-      const exists = paintItems.some(p => p.gallons === gallons && p.product === product && p.area === area);
-      if (!exists) {
-        paintItems.push({
-          area,
-          product,
-          gallons,
-          finish: product.includes('classic') ? 'semi-gloss' : 'flat',
-          color: '',
-          coats: 2,
-          pricePerGallon: productPrices[product] || 55,
-        });
+    
+    for (const pat of gallonPatterns) {
+      pat.lastIndex = 0;
+      let m;
+      while ((m = pat.exec(allLower)) !== null) {
+        let gallons: number, product: string, area: string;
+        if (/^\d/.test(m[1])) {
+          gallons = parseInt(m[1], 10);
+          product = (m[2] || 'paint').trim();
+          area = (m[3] || 'general').trim();
+        } else {
+          product = m[1].trim();
+          gallons = parseInt(m[2], 10);
+          area = 'general';
+        }
+        if (gallons > 0 && gallons <= 100) {
+          const exists = paintItems.some(p => p.gallons === gallons && p.product === product && p.area === area);
+          if (!exists) {
+            paintItems.push({
+              area, product, gallons,
+              finish: product.includes('classic') ? 'semi-gloss' : 'flat',
+              color: '', coats: 2,
+              pricePerGallon: productPrices[product] || 55,
+            });
+          }
+        }
       }
     }
     if (paintItems.length > 0) updates.paintItems = paintItems;
 
-    // Colors
+    // === Colors ===
+    // Expanded popular SW colors
     const swColors: Record<string, string> = {
       'naval': 'SW 6244', 'alabaster': 'SW 7008', 'sea salt': 'SW 6204',
       'agreeable gray': 'SW 7029', 'repose gray': 'SW 7015', 'pure white': 'SW 7005',
@@ -146,6 +259,14 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       'city loft': 'SW 7631', 'dover white': 'SW 6385', 'snowbound': 'SW 7004',
       'mindful gray': 'SW 7016', 'passive': 'SW 7064', 'accessible beige': 'SW 7036',
       'colonnade gray': 'SW 7641', 'worldly gray': 'SW 7043',
+      'urbane bronze': 'SW 7048', 'evergreen fog': 'SW 9130', 'redend point': 'SW 9081',
+      'greek villa': 'SW 7551', 'natural tan': 'SW 7567', 'incredible white': 'SW 7028',
+      'eider white': 'SW 7014', 'modern gray': 'SW 7632', 'balanced beige': 'SW 7037',
+      'pewter tankard': 'SW 0023', 'gauntlet gray': 'SW 7019', 'dorian gray': 'SW 7017',
+      'black magic': 'SW 6991', 'caviar': 'SW 6990', 'oyster white': 'SW 7637',
+      'mega greige': 'SW 7031', 'intellectual gray': 'SW 7045', 'anew gray': 'SW 7030',
+      'shoji white': 'SW 7042', 'origami white': 'SW 7636', 'swiss coffee': 'SW 9502',
+      'white dove': 'SW 7006', 'evening shadow': 'SW 7662',
     };
     
     const colorAssignments = [...(store.getDraftById(dId)?.colorAssignments || [])];
@@ -153,12 +274,16 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       if (allLower.includes(name)) {
         const exists = colorAssignments.some(c => c.color.toLowerCase() === name);
         if (!exists) {
-          colorAssignments.push({ area: 'general', color: name, swCode: code });
+          // Try to find the area context near this color mention
+          let area = 'general';
+          const areaContext = allLower.match(new RegExp(`(body|trim|door|exterior|interior|walls?|ceiling|accent|siding|shutters?)\\s+(?:in\\s+|is\\s+|with\\s+)?${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(?:for\\s+|on\\s+)?(?:the\\s+)?(body|trim|door|exterior|interior|walls?|ceiling|accent|siding|shutters?)`));
+          if (areaContext) area = (areaContext[1] || areaContext[2]).trim();
+          colorAssignments.push({ area, color: name, swCode: code });
         }
       }
     }
-    // SW codes like SW 6244
-    const swCodeMatches = allText.matchAll(/SW\s*(\d{4})/gi);
+    // SW codes like "SW 6244", "62 44", "sixty-two forty-four"
+    const swCodeMatches = allText.matchAll(/SW\s*[-#]?\s*(\d{4})/gi);
     for (const m of swCodeMatches) {
       const code = `SW ${m[1]}`;
       const exists = colorAssignments.some(c => c.swCode === code);
@@ -168,15 +293,56 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     }
     if (colorAssignments.length > 0) updates.colorAssignments = colorAssignments;
 
-    // Scope of work
-    const prepItems = ['patch', 'sand', 'caulk', 'prime', 'pressure wash', 'scrape',
-      'protect flooring', 'protect furniture', 'drop cloth', 'tape off', 'mask',
-      'wallpaper removal', 'drywall repair', 'skim coat'];
+    // === Scope of work ===
+    const prepItems = [
+      'patch', 'patching', 'sand', 'sanding', 'caulk', 'caulking',
+      'prime', 'priming', 'primer', 'pressure wash', 'power wash',
+      'scrape', 'scraping', 'protect flooring', 'protect furniture',
+      'drop cloth', 'tape off', 'taping', 'mask', 'masking',
+      'wallpaper removal', 'remove wallpaper', 'strip wallpaper',
+      'drywall repair', 'drywall patch', 'skim coat',
+      'fill holes', 'nail holes', 'fill cracks', 'wood rot',
+      'wood repair', 'carpentry', 'replace trim', 'replace boards',
+      'clean', 'cleaning', 'prep', 'preparation',
+    ];
     const scope: string[] = [];
     for (const item of prepItems) {
-      if (allLower.includes(item)) scope.push(item);
+      if (allLower.includes(item) && !scope.includes(item)) scope.push(item);
     }
-    if (scope.length > 0) updates.scopeOfWork = scope;
+    // Deduplicate related items
+    const dedupedScope = scope.filter((item, _i, arr) => {
+      if (item === 'sand' && arr.includes('sanding')) return false;
+      if (item === 'patch' && arr.includes('patching')) return false;
+      if (item === 'caulk' && arr.includes('caulking')) return false;
+      if (item === 'prime' && arr.includes('priming')) return false;
+      if (item === 'scrape' && arr.includes('scraping')) return false;
+      if (item === 'mask' && arr.includes('masking')) return false;
+      if (item === 'tape off' && arr.includes('taping')) return false;
+      if (item === 'clean' && arr.includes('cleaning')) return false;
+      if (item === 'prep' && arr.includes('preparation')) return false;
+      return true;
+    });
+    if (dedupedScope.length > 0) updates.scopeOfWork = dedupedScope;
+
+    // === Add-ons ===
+    // Look for hourly add-on work
+    const addOns: { description: string; hours: number; rate: number }[] = [];
+    const addOnPatterns = [
+      /(?:pressure|power)\s*wash(?:ing)?\s*(?:(\d+)\s*hours?)?/i,
+      /carpentry\s*(?:(\d+)\s*hours?)?/i,
+      /wallpaper\s*removal\s*(?:(\d+)\s*hours?)?/i,
+    ];
+    for (const pat of addOnPatterns) {
+      const m = allLower.match(pat);
+      if (m) {
+        const desc = m[0].replace(/\d+\s*hours?/, '').trim();
+        const hours = m[1] ? parseInt(m[1], 10) : 0;
+        if (!addOns.some(a => a.description === desc)) {
+          addOns.push({ description: desc, hours, rate: updates.hourlyRate || 65 });
+        }
+      }
+    }
+    if (addOns.length > 0) updates.addOns = addOns;
 
     if (Object.keys(updates).length > 0) {
       store.updateDraftFields(dId, updates);
