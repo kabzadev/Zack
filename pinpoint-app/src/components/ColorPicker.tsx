@@ -12,12 +12,14 @@ interface ColorPickerProps {
   onColorSelect?: (color: SWColor) => void;
   initialColor?: SWColor | null;
   initialSearch?: string;
+  selectButtonLabel?: string;
 }
 
 export const ColorPicker: React.FC<ColorPickerProps> = ({
   onColorSelect,
   initialColor = null,
   initialSearch = '',
+  selectButtonLabel,
 }) => {
   const [query, setQuery] = useState(initialSearch);
   const [activeFamily, setActiveFamily] = useState<ColorFamily | null>(null);
@@ -308,16 +310,19 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
             {onColorSelect && (
               <button
                 onClick={handleConfirm}
-                className="
+                className={`
                   w-full py-3.5 rounded-xl font-semibold text-base
-                  bg-white text-slate-950 shadow-lg shadow-white/10
-                  hover:bg-slate-100 active:scale-[0.97]
+                  shadow-lg active:scale-[0.97]
                   transition-all duration-200
                   flex items-center justify-center gap-2
-                "
+                  ${selectButtonLabel
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-blue-500/25 hover:from-blue-600 hover:to-cyan-600'
+                    : 'bg-white text-slate-950 shadow-white/10 hover:bg-slate-100'
+                  }
+                `}
               >
                 <Check size={20} strokeWidth={2.5} />
-                Select {selectedColor.name}
+                {selectButtonLabel ? `${selectButtonLabel} — ${selectedColor.name}` : `Select ${selectedColor.name}`}
               </button>
             )}
           </div>
