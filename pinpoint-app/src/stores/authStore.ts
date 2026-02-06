@@ -2,7 +2,17 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// Auto-detect API URL based on current host
+const getApiUrl = () => {
+  // If frontend is accessed via Tailscale IP, use that for API too
+  if (window.location.hostname === '100.88.213.43') {
+    return 'http://100.88.213.43:3001/api';
+  }
+  // Otherwise use localhost or env variable
+  return import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+};
+
+const API_URL = getApiUrl();
 
 export interface User {
   id: string;
