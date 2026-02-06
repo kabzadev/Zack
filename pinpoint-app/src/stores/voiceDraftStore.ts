@@ -330,9 +330,14 @@ export const useVoiceDraftStore = create<VoiceDraftState>()(
     }),
     {
       name: 'pinpoint-voice-drafts',
+      version: 2, // Bump to force reset
       partialize: (state) => ({
         drafts: state.drafts,
         activeDraftId: state.activeDraftId,
+      }),
+      migrate: () => ({
+        drafts: [],
+        activeDraftId: null,
       }),
     }
   )
