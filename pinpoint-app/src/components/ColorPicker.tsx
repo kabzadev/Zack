@@ -11,13 +11,15 @@ import { ColorSwatch } from './ColorSwatch';
 interface ColorPickerProps {
   onColorSelect?: (color: SWColor) => void;
   initialColor?: SWColor | null;
+  initialSearch?: string;
 }
 
 export const ColorPicker: React.FC<ColorPickerProps> = ({
   onColorSelect,
   initialColor = null,
+  initialSearch = '',
 }) => {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialSearch);
   const [activeFamily, setActiveFamily] = useState<ColorFamily | null>(null);
   const [selectedColor, setSelectedColor] = useState<SWColor | null>(initialColor);
   const [copiedField, setCopiedField] = useState<string | null>(null);

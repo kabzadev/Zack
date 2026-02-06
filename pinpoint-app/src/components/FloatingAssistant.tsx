@@ -1,19 +1,30 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useConversation } from '@elevenlabs/react';
 import { MessageCircle, X, Mic, MicOff, Volume2 } from 'lucide-react';
 
 const ASSISTANT_AGENT_ID = 'agent_6601kgsyy9fhe6tsbwhp7mjzv51j';
 
 interface Message {
-  role: 'user' | 'agent';
+  role: 'user' | 'agent' | 'system';
   text: string;
 }
 
 export const FloatingAssistant = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [, setColorAction] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Map page names to routes
+  const pageRoutes: Record<string, string> = {
+    home: '/', customers: '/customers', estimates: '/estimates',
+    'voice-estimate': '/voice-estimate', colors: '/colors',
+    'photo-capture': '/photo-capture', settings: '/settings',
+    dashboard: '/', history: '/estimates', visualizer: '/photo-capture',
+  };
 
   const conversation = useConversation({
     onConnect: () => setError(null),
@@ -37,11 +48,29 @@ export const FloatingAssistant = () => {
       return;
     }
     try {
-      await conversation.startSession({ agentId: ASSISTANT_AGENT_ID } as Parameters<typeof conversation.startSession>[0]);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await conversation.startSession({
+        agentId: ASSISTANT_AGENT_ID,
+        clientTools: {
+          show_colors: async (params: { search: string }) => {
+            const search = params.search || '';
+            setColorAction(search);
+            setMessages(prev => [...prev, { role: 'system', text: `🎨 Showing ${search} colors...` }]);
+            navigate(`/colors?search=${encodeURIComponent(search)}`);
+            return `Opened the color picker filtered to "${search}" colors in the app.`;
+          },
+          navigate: async (params: { page: string }) => {
+            const route = pageRoutes[params.page.toLowerCase()] || '/';
+            setMessages(prev => [...prev, { role: 'system', text: `📱 Opening ${params.page}...` }]);
+            navigate(route);
+            return `Navigated to ${params.page}.`;
+          },
+        },
+      } as unknown as Parameters<typeof conversation.startSession>[0]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to connect');
     }
-  }, [conversation]);
+  }, [conversation, navigate, pageRoutes]);
 
   const endSession = useCallback(async () => {
     try { await conversation.endSession(); } catch {}
@@ -111,7 +140,12 @@ export const FloatingAssistant = () => {
               )}
               <div className="space-y-2.5">
                 {messages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : msg.role === 'system' ? 'justify-center' : 'justify-start'}`}>
+                    {msg.role === 'system' ? (
+                      <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+                        {msg.text}
+                      </div>
+                    ) : (
                     <div className={`max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed ${
                       msg.role === 'user'
                         ? 'bg-blue-500/20 text-blue-50 border border-blue-500/20'
@@ -119,6 +153,7 @@ export const FloatingAssistant = () => {
                     }`}>
                       {msg.text}
                     </div>
+                    )}
                   </div>
                 ))}
                 {isConnected && isSpeaking && (

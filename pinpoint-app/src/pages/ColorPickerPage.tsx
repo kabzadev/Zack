@@ -1,10 +1,12 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout, PageHeader } from '../components';
 import { ColorPicker } from '../components/ColorPicker';
 import type { SWColor } from '../data/sherwin-williams-colors';
 
 export const ColorPickerPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
 
   const handleColorSelect = (color: SWColor) => {
     // For now, log the selection — this will integrate with the estimate builder
@@ -21,7 +23,7 @@ export const ColorPickerPage = () => {
         showBack
       />
       <div className="flex flex-col" style={{ height: 'calc(100vh - 140px)' }}>
-        <ColorPicker onColorSelect={handleColorSelect} />
+        <ColorPicker onColorSelect={handleColorSelect} initialSearch={initialSearch} />
       </div>
     </Layout>
   );
