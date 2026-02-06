@@ -357,6 +357,9 @@ export const PhotoCapture = () => {
             )}
 
             {/* Visualize Button */}
+            {assignedCount === 0 && (
+              <p className="text-xs text-slate-500 text-center">Pick at least one color above to visualize. You don't need to fill every zone — even just walls is fine.</p>
+            )}
             <button
               onClick={handleVisualize}
               disabled={assignedCount === 0}
@@ -367,7 +370,7 @@ export const PhotoCapture = () => {
               }`}
             >
               <Sparkles size={20} />
-              Visualize with AI ({assignedCount} color{assignedCount !== 1 ? 's' : ''})
+              Visualize with AI{assignedCount > 0 ? ` (${assignedCount} color${assignedCount !== 1 ? 's' : ''})` : ''}
               <ChevronRight size={18} />
             </button>
 

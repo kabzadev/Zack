@@ -44,17 +44,35 @@ export const AIVisualization = () => {
       `- ${z.label}: ${z.colorName} (Sherwin-Williams ${z.colorCode}, hex color ${z.colorHex})`
     ).join('\n');
 
-    return `Edit this house photo by repainting it with the following Sherwin-Williams paint colors. Apply each color ONLY to its designated area:
+    const hasWallsOnly = colorZones.length === 1 && (colorZones[0].id === 'body' || colorZones[0].label.toLowerCase().includes('wall'));
+    const isLikelyInterior = hasWallsOnly; // Single wall color = probably interior room
+
+    if (isLikelyInterior) {
+      const z = colorZones[0];
+      return `Edit this room photo by repainting the walls with ${z.colorName} (Sherwin-Williams ${z.colorCode}, hex color ${z.colorHex}).
+
+IMPORTANT INSTRUCTIONS:
+- Repaint ALL visible wall surfaces with the specified color
+- Keep the EXACT same photo — same angle, lighting, shadows, perspective  
+- Preserve ALL non-wall elements: furniture, flooring, ceiling, windows, doors, fixtures, decor
+- The paint should look realistic with proper light and shadow on the walls
+- Maintain wall textures and any architectural details
+- Do NOT change anything except the wall color
+- The result should look like a real photograph, not an illustration
+- Output a photorealistic edited version of the input photo`;
+    }
+
+    return `Edit this photo by repainting it with the following Sherwin-Williams paint colors. Apply each color ONLY to its designated area:
 
 ${colorList}
 
 IMPORTANT INSTRUCTIONS:
 - Repaint ONLY the designated areas with the specified colors
 - Keep the EXACT same photo — same angle, lighting, shadows, perspective
-- Preserve all non-painted elements: windows, roof, landscaping, sky, driveway, walkways
-- Maintain surface textures (wood grain, siding lines, brick pattern, stucco)
+- Preserve all non-painted elements: windows, furniture, flooring, landscaping, fixtures
+- Maintain surface textures (wood grain, siding lines, brick pattern, stucco, drywall)
 - The paint should look realistic with proper light and shadow
-- Do NOT change the architecture or structure of the house
+- Do NOT change the structure or non-paint elements
 - The result should look like a real photograph, not an illustration or render
 - Output a photorealistic edited version of the input photo`;
   }, []);
