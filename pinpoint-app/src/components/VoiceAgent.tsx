@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@elevenlabs/react';
 import { Mic, MicOff, X, Volume2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useVoiceDraftStore, type VoiceConversationEntry, type VoiceDraft } from '../stores/voiceDraftStore';
+import { useCustomerStore } from '../stores/customerStore';
 
 export interface VoiceEstimateData {
   draft: VoiceDraft;
@@ -31,8 +32,53 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
   const currentDraftIdRef = useRef<string | null>(null);
 
   const store = useVoiceDraftStore();
+  const customerStore = useCustomerStore();
+  const customerStoreRef = useRef(customerStore);
+  customerStoreRef.current = customerStore;
+  const storeRef = useRef(store);
+  storeRef.current = store;
 
   useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
+
+  // Client tool: lookup customer by name and auto-fill draft fields
+  const lookupCustomer = useCallback(async (params: { name?: string }) => {
+    const searchName = params?.name || '';
+    if (!searchName) return JSON.stringify({ found: false, message: 'No name provided' });
+
+    const cs = customerStoreRef.current;
+    const results = cs.searchCustomers({ search: searchName });
+
+    if (results.length === 0) {
+      return JSON.stringify({ found: false, message: `No customer found matching "${searchName}". Ask for their details.` });
+    }
+
+    const customer = results[0];
+    const fullName = `${customer.firstName} ${customer.lastName}`;
+    const fullAddress = [customer.address, customer.city, customer.state, customer.zipCode].filter(Boolean).join(', ');
+
+    // Auto-fill the draft with customer info
+    const draftId = currentDraftIdRef.current;
+    if (draftId) {
+      storeRef.current.updateDraftFields(draftId, {
+        customerName: fullName,
+        propertyAddress: fullAddress,
+        customerPhone: customer.phone,
+        customerEmail: customer.email || '',
+      });
+    }
+
+    return JSON.stringify({
+      found: true,
+      name: fullName,
+      address: fullAddress,
+      phone: customer.phone,
+      email: customer.email || '',
+      type: customer.type,
+      tags: customer.tags,
+      estimateCount: customer.estimateCount,
+      message: `Found ${fullName} at ${fullAddress}. Phone: ${customer.phone}. Their info has been added to the estimate. ${customer.estimateCount > 0 ? `They have ${customer.estimateCount} previous estimate(s).` : 'This is their first estimate.'} Now ask about the project details.`,
+    });
+  }, []);
 
   // Load previous conversation when resuming
   useEffect(() => {
@@ -349,7 +395,19 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     }
   }, [store]);
 
+  // Stable ref for lookup tool
+  const lookupCustomerRef = useRef(lookupCustomer);
+  lookupCustomerRef.current = lookupCustomer;
+
+  const clientTools = useRef({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    lookup_customer: async (params: any) => {
+      return lookupCustomerRef.current(params);
+    },
+  }).current;
+
   const conversation = useConversation({
+    clientTools,
     onConnect: () => {
       console.log('[Voice] Connected');
       setErrorMsg(null);

@@ -7,6 +7,7 @@ import { initDatabase } from './config/database';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
 import geminiRoutes from './routes/gemini';
+import photosRoutes from './routes/photos';
 
 dotenv.config();
 
@@ -57,7 +58,7 @@ const authLimiter = rateLimit({
 });
 
 // Body parsing
-app.use(express.json());
+app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Health check
@@ -69,6 +70,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/gemini', geminiRoutes);
+app.use('/api/photos', photosRoutes);
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
