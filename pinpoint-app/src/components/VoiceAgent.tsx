@@ -1,20 +1,23 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@elevenlabs/react';
 import { Mic, MicOff, X, Volume2 } from 'lucide-react';
+import { useVoiceDraftStore, type VoiceConversationEntry } from '../stores/voiceDraftStore';
 
 export interface VoiceEstimateData {
   customerName: string;
+  propertyAddress: string;
+  projectType: string;
   numberOfRooms: number;
   paintColors: string[];
   squareFootage: number;
+  numberOfPainters: number;
+  estimatedDays: number;
+  hourlyRate: number;
+  laborCost: number;
+  gallonsOfPaint: { area: string; gallons: number; product: string }[];
   notes: string;
   rawTranscript: string;
-}
-
-interface TranscriptEntry {
-  role: 'user' | 'agent';
-  message: string;
-  timestamp: number;
+  draftId: string;
 }
 
 interface VoiceAgentProps {
@@ -22,6 +25,7 @@ interface VoiceAgentProps {
   onClose: () => void;
   onEstimateReady: (data: VoiceEstimateData) => void;
   agentId: string;
+  draftId?: string; // If resuming an existing draft
 }
 
 export const VoiceAgent: React.FC<VoiceAgentProps> = ({
@@ -29,87 +33,193 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
   onClose,
   onEstimateReady,
   agentId,
+  draftId,
 }) => {
-  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+  const [transcript, setTranscript] = useState<VoiceConversationEntry[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const hasExtractedRef = useRef(false);
-  const transcriptRef = useRef<TranscriptEntry[]>([]);
+  const transcriptRef = useRef<VoiceConversationEntry[]>([]);
+  const currentDraftIdRef = useRef<string | null>(null);
 
-  // Keep ref in sync for use in callbacks
+  const {
+    getActiveDraft,
+    getDraftById,
+    createDraft,
+    setActiveDraft,
+    addConversationEntry,
+    updateDraftFields,
+    buildAgentContext,
+  } = useVoiceDraftStore();
+
+  // Keep ref in sync
   useEffect(() => {
     transcriptRef.current = transcript;
   }, [transcript]);
 
-  const extractEstimateData = useCallback(() => {
-    if (hasExtractedRef.current) return;
-    hasExtractedRef.current = true;
+  // Load previous conversation when opening with a draft
+  useEffect(() => {
+    if (isOpen && draftId) {
+      const draft = getDraftById(draftId);
+      if (draft && draft.conversationHistory.length > 0) {
+        setTranscript(draft.conversationHistory);
+      }
+      currentDraftIdRef.current = draftId;
+      setActiveDraft(draftId);
+    }
+  }, [isOpen, draftId, getDraftById, setActiveDraft]);
 
-    const currentTranscript = transcriptRef.current;
-    const fullTranscript = currentTranscript
-      .map(t => `${t.role === 'user' ? 'You' : 'Damon'}: ${t.message}`)
-      .join('\n');
-
-    const allMessages = currentTranscript.map(t => t.message.toLowerCase()).join(' ');
-    const allText = currentTranscript.map(t => t.message).join(' ');
+  const extractAndSaveFields = useCallback((dId: string, entries: VoiceConversationEntry[]) => {
+    const allText = entries.map(t => t.message).join(' ');
+    const allLower = allText.toLowerCase();
 
     // Extract customer name
-    let customerName = '';
-    const namePatterns = [
-      /(?:my name is|i'm|i am|this is for|name is|it's for|for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/,
-    ];
-    for (const pattern of namePatterns) {
-      const match = allText.match(pattern);
-      if (match) {
-        customerName = match[1].trim();
-        break;
-      }
-    }
+    let customerName: string | null = null;
+    const nameMatch = allText.match(/(?:for|customer(?:\s+is)?|name(?:\s+is)?|this is for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/);
+    if (nameMatch) customerName = nameMatch[1].trim();
+
+    // Extract address
+    let propertyAddress: string | null = null;
+    const addrMatch = allText.match(/(\d+\s+[\w\s]+(?:Street|St|Avenue|Ave|Drive|Dr|Road|Rd|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl)[\w\s,]*)/i);
+    if (addrMatch) propertyAddress = addrMatch[1].trim();
+
+    // Extract project type
+    let projectType: 'interior' | 'exterior' | 'both' | null = null;
+    if (allLower.includes('interior') && allLower.includes('exterior')) projectType = 'both';
+    else if (allLower.includes('exterior')) projectType = 'exterior';
+    else if (allLower.includes('interior')) projectType = 'interior';
 
     // Extract rooms
-    let numberOfRooms = 0;
-    const roomMatch = allMessages.match(/(\d+)\s*(?:rooms?|bedrooms?|areas?)/i);
+    let numberOfRooms: number | null = null;
+    const roomMatch = allLower.match(/(\d+)\s*(?:rooms?|bedrooms?|areas?)/);
     if (roomMatch) numberOfRooms = parseInt(roomMatch[1], 10);
 
-    // Extract colors
-    const colorKeywords = [
-      'agreeable gray', 'accessible beige', 'alabaster', 'repose gray', 'sea salt',
-      'naval', 'pure white', 'extra white', 'snowbound', 'dover white',
-      'white', 'cream', 'beige', 'gray', 'grey', 'blue', 'navy',
-      'green', 'sage', 'red', 'yellow', 'orange', 'black', 'brown', 'tan',
-    ];
-    const paintColors: string[] = [];
-    for (const color of colorKeywords) {
-      if (allMessages.includes(color) && !paintColors.includes(color)) {
-        paintColors.push(color);
-      }
-    }
+    // Extract painters
+    let numberOfPainters: number | null = null;
+    const painterMatch = allLower.match(/(\d+)\s*(?:guys?|painters?|men|crew|people)/);
+    if (painterMatch) numberOfPainters = parseInt(painterMatch[1], 10);
 
-    // Extract sq footage
-    let squareFootage = 0;
-    const sqftMatch = allMessages.match(/(\d[\d,]*)\s*(?:square\s*(?:feet|foot|ft)|sq\s*(?:ft|feet)|sqft)/i);
+    // Extract days
+    let estimatedDays: number | null = null;
+    const daysMatch = allLower.match(/(\d+(?:\.\d+)?)\s*days?/);
+    if (daysMatch) estimatedDays = parseFloat(daysMatch[1]);
+
+    // Extract rate
+    let hourlyRate: number | null = null;
+    const rateMatch = allLower.match(/(?:\$)?(\d+)\s*(?:an hour|per hour|\/hr|hourly|\/hour)/);
+    if (rateMatch) hourlyRate = parseInt(rateMatch[1], 10);
+
+    // Extract square footage
+    let squareFootage: number | null = null;
+    const sqftMatch = allLower.match(/(\d[\d,]*)\s*(?:square\s*(?:feet|foot|ft)|sq\s*(?:ft|feet)|sqft)/);
     if (sqftMatch) squareFootage = parseInt(sqftMatch[1].replace(/,/g, ''), 10);
 
-    const notes = currentTranscript.length > 0
-      ? `Voice conversation (${currentTranscript.length} messages). ${paintColors.length > 0 ? `Colors: ${paintColors.join(', ')}.` : ''}`
-      : '';
+    // Extract colors (SW colors + common colors)
+    const swColors = [
+      'agreeable gray', 'accessible beige', 'alabaster', 'repose gray', 'sea salt',
+      'naval', 'pure white', 'extra white', 'snowbound', 'dover white', 'city loft',
+      'passive', 'colonnade gray', 'mindful gray', 'worldly gray', 'iron ore',
+      'tricorn black', 'high reflective white', 'shoji white', 'eider white',
+      'modern gray', 'balanced beige', 'mega greige', 'analytical gray',
+      'duration', 'emerald', 'superpaint', 'proclassic', 'pro classic',
+    ];
+    const colors: string[] = [];
+    for (const color of swColors) {
+      if (allLower.includes(color) && !colors.includes(color)) {
+        colors.push(color);
+      }
+    }
+    // Also look for SW codes like "SW 6244" or "SW6244"
+    const swCodeMatches = allText.matchAll(/SW\s*(\d{4})/gi);
+    for (const m of swCodeMatches) {
+      const code = `SW ${m[1]}`;
+      if (!colors.includes(code)) colors.push(code);
+    }
 
-    onEstimateReady({
-      customerName, numberOfRooms, paintColors, squareFootage, notes, rawTranscript: fullTranscript,
-    });
-  }, [onEstimateReady]);
+    // Extract gallons
+    const gallonsOfPaint: { area: string; gallons: number; product: string }[] = [];
+    const gallonMatches = allLower.matchAll(/(\d+)\s*gallons?\s*(?:of\s+)?(?:(duration|superpaint|emerald|proclassic|pro classic|primer|problock))?(?:\s+(?:for\s+)?(?:the\s+)?(exterior|interior|trim|body|doors?|ceiling|walls?))?/gi);
+    for (const m of gallonMatches) {
+      gallonsOfPaint.push({
+        gallons: parseInt(m[1], 10),
+        product: m[2] || 'paint',
+        area: m[3] || 'general',
+      });
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (customerName) updates.customerName = customerName;
+    if (propertyAddress) updates.propertyAddress = propertyAddress;
+    if (projectType) updates.projectType = projectType;
+    if (numberOfRooms != null) updates.numberOfRooms = numberOfRooms;
+    if (colors.length > 0) updates.colors = colors;
+    if (squareFootage != null) updates.squareFootage = squareFootage;
+    if (numberOfPainters != null) updates.numberOfPainters = numberOfPainters;
+    if (estimatedDays != null) updates.estimatedDays = estimatedDays;
+    if (hourlyRate != null) updates.hourlyRate = hourlyRate;
+    if (gallonsOfPaint.length > 0) updates.gallonsOfPaint = gallonsOfPaint;
+
+    if (Object.keys(updates).length > 0) {
+      updateDraftFields(dId, updates);
+    }
+  }, [updateDraftFields]);
+
+  const buildEstimateData = useCallback((): VoiceEstimateData | null => {
+    const id = currentDraftIdRef.current;
+    if (!id) return null;
+    
+    // Run extraction one final time
+    extractAndSaveFields(id, transcriptRef.current);
+    
+    const draft = getDraftById(id);
+    if (!draft) return null;
+
+    const fullTranscript = transcriptRef.current
+      .map(t => `${t.role === 'user' ? 'You' : 'Agent'}: ${t.message}`)
+      .join('\n');
+
+    return {
+      customerName: draft.customerName || '',
+      propertyAddress: draft.propertyAddress || '',
+      projectType: draft.projectType || '',
+      numberOfRooms: draft.numberOfRooms || 0,
+      paintColors: draft.colors,
+      squareFootage: draft.squareFootage || 0,
+      numberOfPainters: draft.numberOfPainters || 0,
+      estimatedDays: draft.estimatedDays || 0,
+      hourlyRate: draft.hourlyRate || 0,
+      laborCost: draft.laborCost || 0,
+      gallonsOfPaint: draft.gallonsOfPaint,
+      notes: draft.specialNotes || '',
+      rawTranscript: fullTranscript,
+      draftId: id,
+    };
+  }, [getDraftById, extractAndSaveFields]);
 
   const conversation = useConversation({
     onConnect: () => {
-      console.log('[Voice] Connected to Damon');
+      console.log('[Voice] Connected');
       setErrorMsg(null);
     },
     onDisconnect: () => {
       console.log('[Voice] Disconnected');
+      // Extract fields when conversation ends
+      const id = currentDraftIdRef.current;
+      if (id) {
+        extractAndSaveFields(id, transcriptRef.current);
+      }
     },
     onMessage: (props: { message: string; source: string }) => {
       const role = props.source === 'user' ? 'user' as const : 'agent' as const;
-      setTranscript(prev => [...prev, { role, message: props.message, timestamp: Date.now() }]);
+      const entry: VoiceConversationEntry = { role, message: props.message, timestamp: Date.now() };
+      
+      setTranscript(prev => [...prev, entry]);
+      
+      // Save to draft store
+      const id = currentDraftIdRef.current;
+      if (id) {
+        addConversationEntry(id, entry);
+      }
     },
     onError: (message: string) => {
       console.error('[Voice] Error:', message);
@@ -124,7 +234,6 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
 
   const startConversation = useCallback(async () => {
     try {
-      // Request mic permission
       await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       setErrorMsg('Microphone access denied. Please allow microphone in your browser settings.');
@@ -132,22 +241,59 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     }
 
     hasExtractedRef.current = false;
-    setTranscript([]);
     setErrorMsg(null);
 
+    // Create or resume a draft
+    let activeId = currentDraftIdRef.current;
+    if (!activeId) {
+      // Check for existing incomplete draft
+      const activeDraft = getActiveDraft();
+      if (activeDraft && !activeDraft.isComplete) {
+        activeId = activeDraft.id;
+      } else {
+        const newDraft = createDraft();
+        activeId = newDraft.id;
+      }
+      currentDraftIdRef.current = activeId;
+    }
+
+    // Build dynamic overrides with collected context
+    const context = buildAgentContext(activeId);
+    const isResume = (getDraftById(activeId)?.conversationHistory.length || 0) > 0;
+
     try {
-      console.log('[Voice] Starting session with agent:', agentId);
-      const id = await conversation.startSession({
+      console.log('[Voice] Starting session, draft:', activeId, 'resume:', isResume);
+      
+      // Build overrides for the agent
+      const overrides: Record<string, unknown> = {};
+      
+      if (isResume && context) {
+        // Override the agent prompt to include context about what's been collected
+        overrides.agent = {
+          prompt: {
+            prompt: `You are resuming an estimate conversation. Here is the current state:\n\n${context}\n\nIMPORTANT: Welcome the user back and continue collecting the missing information. Do NOT re-ask questions that have already been answered.`,
+          },
+          first_message: `Welcome back! Let me check where we left off...`,
+        };
+      }
+
+      const sessionConfig: Record<string, unknown> = {
         agentId,
         connectionType: 'websocket',
-      });
-      console.log('[Voice] Session started, id:', id);
+      };
+      
+      if (Object.keys(overrides).length > 0) {
+        sessionConfig.overrides = overrides;
+      }
+
+      const id = await conversation.startSession(sessionConfig as Parameters<typeof conversation.startSession>[0]);
+      console.log('[Voice] Session started:', id);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       console.error('[Voice] Failed to start:', msg);
       setErrorMsg(`Failed to connect: ${msg}`);
     }
-  }, [agentId, conversation]);
+  }, [agentId, conversation, createDraft, getActiveDraft, getDraftById, buildAgentContext]);
 
   const stopConversation = useCallback(async () => {
     try {
@@ -168,14 +314,23 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     if (conversation.status === 'connected') {
       await stopConversation();
     }
-    extractEstimateData();
-  }, [conversation.status, stopConversation, extractEstimateData]);
+    
+    if (!hasExtractedRef.current) {
+      hasExtractedRef.current = true;
+      const data = buildEstimateData();
+      if (data) {
+        onEstimateReady(data);
+      }
+    }
+  }, [conversation.status, stopConversation, buildEstimateData, onEstimateReady]);
 
   if (!isOpen) return null;
 
   const isConnected = conversation.status === 'connected';
   const isConnecting = conversation.status === 'connecting';
   const isSpeaking = conversation.isSpeaking;
+  const currentDraft = currentDraftIdRef.current ? getDraftById(currentDraftIdRef.current) : null;
+  const isResuming = currentDraft && currentDraft.conversationHistory.length > 0 && transcript.length === 0;
 
   return (
     <div className="fixed inset-0 z-[200] flex flex-col">
@@ -189,11 +344,12 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
               <Volume2 size={20} className="text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Damon</h2>
+              <h2 className="text-lg font-bold text-white">Pinpoint Estimator</h2>
               <p className="text-xs text-slate-400">
                 {isConnected
                   ? isSpeaking ? 'Speaking...' : 'Listening...'
-                  : isConnecting ? 'Connecting...' : 'Ready'}
+                  : isConnecting ? 'Connecting...'
+                  : isResuming ? 'Resuming conversation...' : 'Ready'}
               </p>
             </div>
           </div>
@@ -206,6 +362,18 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
         {errorMsg && (
           <div className="mx-5 mb-2 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl">
             <p className="text-red-400 text-sm">{errorMsg}</p>
+          </div>
+        )}
+
+        {/* Draft Status Badge */}
+        {currentDraft && (
+          <div className="flex justify-center py-1">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/40 border border-slate-700/20">
+              <div className={`w-1.5 h-1.5 rounded-full ${currentDraft.isComplete ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+              <span className="text-[10px] text-slate-500 font-medium">
+                Draft {currentDraft.id.slice(-6)} • {currentDraft.conversationHistory.length} messages
+              </span>
+            </div>
           </div>
         )}
 
@@ -232,9 +400,13 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
               <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center mb-6 border border-blue-500/20">
                 <Mic size={36} className="text-blue-400" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Voice Estimate</h3>
+              <h3 className="text-xl font-bold text-white mb-2">
+                {isResuming ? 'Continue Estimate' : 'Voice Estimate'}
+              </h3>
               <p className="text-slate-400 text-sm max-w-[280px] leading-relaxed">
-                Tap the microphone to start talking with Damon. He'll help you build a painting estimate.
+                {isResuming
+                  ? "Tap the microphone to pick up where you left off. The agent remembers what you've already discussed."
+                  : "Tap the microphone to start talking with the estimating assistant. They'll help you build a painting estimate."}
               </p>
             </div>
           ) : (
@@ -246,7 +418,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
                       ? 'bg-blue-500/20 border border-blue-500/30 text-blue-50'
                       : 'bg-slate-800/80 border border-slate-700/50 text-slate-200'
                   }`}>
-                    <p className="text-xs font-semibold mb-1 opacity-60">{entry.role === 'user' ? 'You' : 'Damon'}</p>
+                    <p className="text-xs font-semibold mb-1 opacity-60">{entry.role === 'user' ? 'You' : 'Estimator'}</p>
                     <p className="text-sm leading-relaxed">{entry.message}</p>
                   </div>
                 </div>
@@ -288,7 +460,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
                       : 'bg-gradient-to-br from-blue-500 to-cyan-500 shadow-[0_8px_32px_rgba(59,130,246,0.4)] hover:scale-105'
                 }`}
               >
-                {isConnected ? <MicOff size={32} className="text-white" /> 
+                {isConnected ? <MicOff size={32} className="text-white" />
                   : isConnecting ? <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                   : <Mic size={32} className="text-white" />}
               </button>
