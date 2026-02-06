@@ -30,7 +30,36 @@ A mobile-first React application for the Pinpoint Painting crew to create profes
 
 ## Quick Start
 
-### Option 1: Docker (Recommended)
+### ⚡ Fast Development (Recommended for Iteration)
+
+Skip Docker builds - run frontend/backend directly with hot reload. Only Postgres in Docker.
+
+```bash
+# One command to start everything
+./start-dev.sh
+
+# Or manually:
+# 1. Start Postgres
+docker-compose -f docker-compose.dev.yml up -d
+
+# 2. Start backend (in terminal 1)
+cd backend && npm run dev
+
+# 3. Start frontend (in terminal 2)
+npm run dev
+```
+
+**URLs:**
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3001
+- Postgres: localhost:5432
+
+**To stop:**
+```bash
+./stop-dev.sh
+```
+
+### Option 1: Docker (Production-like)
 
 ```bash
 # Copy environment file and add your Twilio credentials
