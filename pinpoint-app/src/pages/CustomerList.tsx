@@ -52,11 +52,9 @@ export const CustomerList = () => {
         <div className="flex items-center gap-3 mb-4">
           <button 
             onClick={() => navigate('/')}
-            className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center"
+            className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center text-xl font-medium"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+            ‹
           </button>
           <div className="flex-1">
             <h1 className="font-bold text-white text-xl">Customers</h1>
@@ -69,40 +67,31 @@ export const CustomerList = () => {
         {/* Search Bar */}
         <div className="flex gap-3">
           <div className="flex-1 relative">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
             <input
               type="text"
-              placeholder="Search customers..."
+              placeholder="🔍  Search customers..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="input-field pl-12"
+              className="input-field"
             />
             {search && (
               <button 
                 onClick={() => setSearch('')}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors text-sm"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                ×
               </button>
             )}
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`w-12 h-12 rounded-xl transition-all flex items-center justify-center ${
+            className={`w-12 h-12 rounded-xl transition-all flex items-center justify-center text-lg ${
               showFilters 
                 ? 'bg-blue-500 text-white shadow-glow' 
                 : 'bg-slate-800/50 text-slate-400 hover:text-white'
             }`}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
+            ☰
           </button>
         </div>
       </header>
@@ -275,9 +264,7 @@ export const CustomerList = () => {
                   </div>
 
                   {/* Arrow */}
-                  <svg className="w-5 h-5 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <span className="text-slate-600 text-xl flex-shrink-0">›</span>
                 </div>
               );
             })}
@@ -288,11 +275,9 @@ export const CustomerList = () => {
       {/* Add Button */}
       <button
         onClick={() => navigate('/customers/new')}
-        className="fab fixed bottom-6 right-6 z-50"
+        className="fab fixed bottom-6 right-6 z-50 text-2xl font-light"
       >
-        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
+        +
       </button>
     </div>
   );

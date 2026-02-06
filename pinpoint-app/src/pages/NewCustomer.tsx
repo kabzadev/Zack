@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerStore } from '../stores/customerStore';
-import { ChevronLeft, Plus } from 'lucide-react';
 
 export const NewCustomer = () => {
   const navigate = useNavigate();
@@ -96,26 +95,33 @@ export const NewCustomer = () => {
     navigate(`/customers/${customer.id}`);
   };
 
+  const typeConfig = {
+    'homeowner': { emoji: '🏠', label: 'Homeowner' },
+    'contractor': { emoji: '🔨', label: 'Contractor' },
+    'property-manager': { emoji: '🏢', label: 'Property Mgr' },
+    'commercial': { emoji: '🏬', label: 'Commercial' }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-950 pb-24">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
+      <header className="app-header px-5 py-4 sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate('/customers')}
-            className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center text-xl font-medium"
           >
-            <ChevronLeft size={24} />
+            ‹
           </button>
-          <h1 className="text-xl font-bold text-gray-900">New Customer</h1>
+          <h1 className="font-bold text-white text-lg">New Customer</h1>
         </div>
       </header>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="p-4 space-y-6">
+      <form onSubmit={handleSubmit} className="p-5 space-y-4">
         {/* Name */}
-        <div className="card space-y-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase">Name</h2>
+        <div className="app-card space-y-4">
+          <h2 className="section-title">Name</h2>
           
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -126,7 +132,7 @@ export const NewCustomer = () => {
                 className={`w-full input-field ${errors.firstName ? 'border-red-500' : ''}`}
                 placeholder="First name"
               />
-              {errors.firstName && <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>}
+              {errors.firstName && <p className="text-red-400 text-xs mt-1">{errors.firstName}</p>}
             </div>
             <div>
               <input
@@ -136,14 +142,14 @@ export const NewCustomer = () => {
                 className={`w-full input-field ${errors.lastName ? 'border-red-500' : ''}`}
                 placeholder="Last name"
               />
-              {errors.lastName && <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>}
+              {errors.lastName && <p className="text-red-400 text-xs mt-1">{errors.lastName}</p>}
             </div>
           </div>
         </div>
 
         {/* Contact */}
-        <div className="card space-y-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase">Contact</h2>
+        <div className="app-card space-y-4">
+          <h2 className="section-title">Contact</h2>
           
           <div>
             <input
@@ -153,7 +159,7 @@ export const NewCustomer = () => {
               className={`w-full input-field ${errors.phone ? 'border-red-500' : ''}`}
               placeholder="Phone number"
             />
-            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+            {errors.phone && <p className="text-red-400 text-xs mt-1">{errors.phone}</p>}
           </div>
           
           <div>
@@ -168,8 +174,8 @@ export const NewCustomer = () => {
         </div>
 
         {/* Address */}
-        <div className="card space-y-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase">Address</h2>
+        <div className="app-card space-y-4">
+          <h2 className="section-title">Address</h2>
           
           <div>
             <input
@@ -179,7 +185,7 @@ export const NewCustomer = () => {
               className={`w-full input-field ${errors.address ? 'border-red-500' : ''}`}
               placeholder="Street address"
             />
-            {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+            {errors.address && <p className="text-red-400 text-xs mt-1">{errors.address}</p>}
           </div>
           
           <div className="grid grid-cols-3 gap-3">
@@ -191,7 +197,7 @@ export const NewCustomer = () => {
                 className={`w-full input-field ${errors.city ? 'border-red-500' : ''}`}
                 placeholder="City"
               />
-              {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+              {errors.city && <p className="text-red-400 text-xs mt-1">{errors.city}</p>}
             </div>
             <div>
               <input
@@ -201,7 +207,7 @@ export const NewCustomer = () => {
                 className={`w-full input-field ${errors.state ? 'border-red-500' : ''}`}
                 placeholder="State"
               />
-              {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state}</p>}
+              {errors.state && <p className="text-red-400 text-xs mt-1">{errors.state}</p>}
             </div>
           </div>
           
@@ -213,35 +219,36 @@ export const NewCustomer = () => {
               className={`w-full input-field ${errors.zipCode ? 'border-red-500' : ''}`}
               placeholder="ZIP code"
             />
-            {errors.zipCode && <p className="text-red-500 text-xs mt-1">{errors.zipCode}</p>}
+            {errors.zipCode && <p className="text-red-400 text-xs mt-1">{errors.zipCode}</p>}
           </div>
         </div>
 
         {/* Customer Type */}
-        <div className="card space-y-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase">Customer Type</h2>
+        <div className="app-card space-y-4">
+          <h2 className="section-title">Customer Type</h2>
           
           <div className="grid grid-cols-2 gap-2">
-            {['homeowner', 'contractor', 'property-manager', 'commercial'].map((type) => (
+            {(Object.keys(typeConfig) as Array<keyof typeof typeConfig>).map((type) => (
               <button
                 key={type}
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, type: type as any }))}
-                className={`p-3 rounded-lg text-sm font-medium border-2 transition-colors text-left ${
+                className={`p-3 rounded-xl text-sm font-medium border-2 transition-all text-left flex items-center gap-2 ${
                   formData.type === type
-                    ? 'border-pinpoint-navy bg-pinpoint-navy/5 text-pinpoint-navy'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                    ? 'border-blue-500 bg-blue-500/10 text-white'
+                    : 'border-slate-700 text-slate-400 hover:border-slate-600'
                 }`}
               >
-                {type.replace('-', ' ')}
+                <span>{typeConfig[type].emoji}</span>
+                <span>{typeConfig[type].label}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Tags */}
-        <div className="card space-y-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase">Tags</h2>
+        <div className="app-card space-y-4">
+          <h2 className="section-title">Tags</h2>
           
           <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
@@ -251,11 +258,11 @@ export const NewCustomer = () => {
                 onClick={() => toggleTag(tag)}
                 className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   formData.selectedTags.includes(tag)
-                    ? 'bg-pinpoint-navy text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                 }`}
               >
-                {tag}
+                #{tag}
               </button>
             ))}
           </div>
@@ -272,16 +279,16 @@ export const NewCustomer = () => {
             <button
               type="button"
               onClick={addNewTag}
-              className="btn-primary py-2"
+              className="btn-primary py-2 px-4 text-lg"
             >
-              <Plus size={20} />
+              +
             </button>
           </div>
         </div>
 
         {/* Notes */}
-        <div className="card space-y-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase">Notes</h2>
+        <div className="app-card space-y-4">
+          <h2 className="section-title">Notes</h2>
           
           <textarea
             value={formData.notes}
@@ -293,7 +300,7 @@ export const NewCustomer = () => {
 
         {/* Submit */}
         <div className="pt-4 pb-8">
-          <button type="submit" className="w-full btn-primary py-4 text-lg">
+          <button type="submit" className="w-full btn-primary py-4 text-lg font-semibold">
             Create Customer
           </button>
         </div>

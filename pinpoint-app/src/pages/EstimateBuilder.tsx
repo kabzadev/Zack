@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEstimateStore, type MaterialItem, type LaborItem, materialPresets } from '../stores/estimateStore';
 import { useCustomerStore } from '../stores/customerStore';
-import { ChevronLeft, Plus, Save, FileText } from 'lucide-react';
 
 export const EstimateBuilder = () => {
   const navigate = useNavigate();
@@ -52,9 +51,9 @@ export const EstimateBuilder = () => {
 
   if (!customer) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500 mb-4">No customer selected</p>
+          <p className="text-slate-400 mb-4">No customer selected</p>
           <button onClick={() => navigate('/customers')} className="btn-primary">
             Select a Customer
           </button>
@@ -65,8 +64,8 @@ export const EstimateBuilder = () => {
 
   if (!estimate) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pinpoint-navy"></div>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="animate-pulse text-blue-400 text-2xl">◆</div>
       </div>
     );
   }
@@ -121,32 +120,41 @@ export const EstimateBuilder = () => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
+  const categoryEmoji = {
+    'paint': '🎨',
+    'primer': '🎯', 
+    'supply': '📦',
+    'caulk': '💧',
+    'tape': '📼',
+    'other': '📎'
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-32">
+    <div className="min-h-screen bg-slate-950 pb-40">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
-        <div className="flex items-center gap-3 mb-3">
+      <header className="app-header px-5 py-4 sticky top-0 z-50">
+        <div className="flex items-center gap-3 mb-4">
           <button 
-            onClick={() => navigate('/dashboard')}
-            className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            onClick={() => navigate('/customers')}
+            className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center text-xl font-medium"
           >
-            <ChevronLeft size={24} />
+            ‹
           </button>
-          <h1 className="text-xl font-bold text-gray-900">New Estimate</h1>
+          <h1 className="font-bold text-white text-lg">New Estimate</h1>
         </div>
         
         {/* Customer Info */}
-        <div className="bg-gray-50 rounded-lg p-3">
-          <p className="font-medium text-gray-900">{estimate.customerName}</p>
-          <p className="text-sm text-gray-500">{estimate.customerAddress}</p>
+        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+          <p className="font-semibold text-white">{estimate.customerName}</p>
+          <p className="text-sm text-slate-400 mt-1">📍 {estimate.customerAddress}</p>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="p-4 space-y-4">
+      <div className="p-5 space-y-4">
         {/* Project Name */}
-        <div className="card">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Project Name</label>
+        <div className="app-card">
+          <label className="section-title block mb-2">Project Name</label>
           <input
             type="text"
             value={estimate.projectName}
@@ -157,8 +165,8 @@ export const EstimateBuilder = () => {
         </div>
 
         {/* Scope of Work */}
-        <div className="card">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Scope of Work</label>
+        <div className="app-card">
+          <label className="section-title block mb-2">Scope of Work</label>
           <textarea
             value={estimate.description || ''}
             onChange={(e) => updateEstimate(estimate.id, { description: e.target.value })}
@@ -168,10 +176,10 @@ export const EstimateBuilder = () => {
         </div>
 
         {/* Markup & Tax Settings */}
-        <div className="card">
+        <div className="app-card">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="section-title block mb-1">
                 Material Markup
               </label>
               <div className="flex items-center">
@@ -181,11 +189,11 @@ export const EstimateBuilder = () => {
                   onChange={(e) => updateEstimate(estimate.id, { materialMarkupPercent: Number(e.target.value) })}
                   className="w-20 input-field text-center"
                 />
-                <span className="ml-2 text-gray-500">% </span>
+                <span className="ml-2 text-slate-400">%</span>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="section-title block mb-1">
                 Tax Rate
               </label>
               <div className="flex items-center">
@@ -195,52 +203,51 @@ export const EstimateBuilder = () => {
                   onChange={(e) => updateEstimate(estimate.id, { taxRate: Number(e.target.value) })}
                   className="w-20 input-field text-center"
                 />
-                <span className="ml-2 text-gray-500">%</span>
+                <span className="ml-2 text-slate-400">%</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Materials Section */}
-        <div className="card">
+        <div className="app-card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900">Materials</h2>
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <span>📦</span> Materials
+            </h2>
             <button
               onClick={() => {
                 setEditingMaterial(null);
                 setMaterialForm({ name: '', quantity: 1, unit: 'gallon', unitPrice: 0, category: 'paint' });
                 setShowMaterialForm(true);
               }}
-              className="flex items-center gap-1 text-sm text-pinpoint-blue font-medium"
+              className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 font-medium"
             >
-              <Plus size={16} />
-              Add
+              <span className="text-lg">+</span> Add
             </button>
           </div>
 
           {estimate.materials.length === 0 ? (
-            <p className="text-gray-500 text-sm">No materials added yet</p>
+            <p className="text-slate-500 text-sm">No materials added yet</p>
           ) : (
             <div className="space-y-2">
               {estimate.materials.map((material) => (
                 <div 
                   key={material.id}
                   onClick={() => startEditMaterial(material)}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                  className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors border border-slate-700/30"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">{material.name}</span>
-                      <span className="text-xs px-2 py-0.5 bg-gray-200 rounded-full text-gray-600">
-                        {material.category}
-                      </span>
+                      <span className="text-lg">{categoryEmoji[material.category]}</span>
+                      <span className="font-medium text-white">{material.name}</span>
                     </div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-slate-400">
                       {material.quantity} {material.unit} × {formatCurrency(material.unitPrice)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-white">
                       {formatCurrency(material.quantity * material.unitPrice)}
                     </p>
                     <button
@@ -248,9 +255,9 @@ export const EstimateBuilder = () => {
                         e.stopPropagation();
                         removeMaterial(estimate.id, material.id);
                       }}
-                      className="text-red-500 text-xs hover:underline"
+                      className="text-red-400 text-xs hover:text-red-300"
                     >
-                      Remove
+                      × Remove
                     </button>
                   </div>
                 </div>
@@ -259,8 +266,8 @@ export const EstimateBuilder = () => {
           )}
 
           {/* Material Presets */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <p className="text-xs font-medium text-gray-500 uppercase mb-2">Quick Add</p>
+          <div className="mt-4 pt-4 border-t border-slate-700/50">
+            <p className="text-xs font-medium text-slate-500 uppercase mb-2">Quick Add</p>
             <div className="flex flex-wrap gap-2">
               {materialPresets.slice(0, 6).map((preset, idx) => (
                 <button
@@ -268,7 +275,7 @@ export const EstimateBuilder = () => {
                   onClick={() => {
                     addMaterial(estimate.id, { ...preset, quantity: 1 });
                   }}
-                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm text-slate-300 transition-colors"
                 >
                   + {preset.name.split(' ')[0]}
                 </button>
@@ -278,40 +285,41 @@ export const EstimateBuilder = () => {
         </div>
 
         {/* Labor Section */}
-        <div className="card">
+        <div className="app-card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900">Labor</h2>
+            <h2 className="font-semibold text-white flex items-center gap-2">
+              <span>👷</span> Labor
+            </h2>
             <button
               onClick={() => {
                 setEditingLabor(null);
                 setLaborForm({ description: '', painters: 2, days: 3, hoursPerDay: 8, hourlyRate: 35 });
                 setShowLaborForm(true);
               }}
-              className="flex items-center gap-1 text-sm text-pinpoint-blue font-medium"
+              className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 font-medium"
             >
-              <Plus size={16} />
-              Add
+              <span className="text-lg">+</span> Add
             </button>
           </div>
 
           {estimate.labor.length === 0 ? (
-            <p className="text-gray-500 text-sm">No labor items added yet</p>
+            <p className="text-slate-500 text-sm">No labor items added yet</p>
           ) : (
             <div className="space-y-2">
               {estimate.labor.map((labor) => (
                 <div 
                   key={labor.id}
                   onClick={() => startEditLabor(labor)}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100"
+                  className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors border border-slate-700/30"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-gray-900">{labor.description}</p>
-                    <p className="text-sm text-gray-500">
+                    <p className="font-medium text-white">{labor.description}</p>
+                    <p className="text-sm text-slate-400">
                       {labor.painters} painters × {labor.days} days × {labor.hoursPerDay} hrs × ${labor.hourlyRate}/hr
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-white">
                       {formatCurrency(labor.painters * labor.days * labor.hoursPerDay * labor.hourlyRate)}
                     </p>
                     <button
@@ -319,9 +327,9 @@ export const EstimateBuilder = () => {
                         e.stopPropagation();
                         removeLabor(estimate.id, labor.id);
                       }}
-                      className="text-red-500 text-xs hover:underline"
+                      className="text-red-400 text-xs hover:text-red-300"
                     >
-                      Remove
+                      × Remove
                     </button>
                   </div>
                 </div>
@@ -332,41 +340,40 @@ export const EstimateBuilder = () => {
       </div>
 
       {/* Bottom Summary Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800 p-5 z-40">
         <div className="max-w-lg mx-auto">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-sm text-gray-500">
-              Materials: <span className="font-medium text-gray-900">{formatCurrency(estimate.subtotalMaterials)}</span>
+          <div className="flex items-center justify-between mb-3 text-sm">
+            <div className="text-slate-400">
+              Materials: <span className="font-medium text-white">{formatCurrency(estimate.subtotalMaterials)}</span>
               {estimate.materialMarkupPercent > 0 && (
-                <span className="text-gray-400"> (+{formatCurrency(estimate.markupAmount)} markup)</span>
+                <span className="text-slate-500"> (+{formatCurrency(estimate.markupAmount)} markup)</span>
               )}
             </div>
-            <div className="text-sm text-gray-500">
-              Labor: <span className="font-medium text-gray-900">{formatCurrency(estimate.subtotalLabor)}</span>
+            <div className="text-slate-400">
+              Labor: <span className="font-medium text-white">{formatCurrency(estimate.subtotalLabor)}</span>
             </div>
           </div>
           
           {estimate.taxAmount > 0 && (
-            <div className="text-sm text-gray-500 mb-2">
-              Tax ({estimate.taxRate}%): <span className="font-medium text-gray-900">{formatCurrency(estimate.taxAmount)}</span>
+            <div className="text-sm text-slate-400 mb-2">
+              Tax ({estimate.taxRate}%): <span className="font-medium text-white">{formatCurrency(estimate.taxAmount)}</span>
             </div>
           )}
           
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-pinpoint-navy">{formatCurrency(estimate.total)}</p>
-              <p className="text-xs text-gray-500">Total Estimate</p>
+              <p className="text-2xl font-bold text-gradient">{formatCurrency(estimate.total)}</p>
+              <p className="text-xs text-slate-500">Total Estimate</p>
             </div>
             <div className="flex gap-2">
               <button 
                 onClick={() => navigate('/estimates/preview')}
-                className="btn-secondary"
+                className="w-12 h-12 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-all flex items-center justify-center text-xl"
               >
-                <FileText size={20} />
+                📄
               </button>
-              <button className="btn-primary">
-                <Save size={20} className="mr-2" />
-                Save
+              <button className="h-12 px-6 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold shadow-glow flex items-center gap-2 hover:shadow-glow-lg transition-all">
+                <span>💾</span> Save
               </button>
             </div>
           </div>
@@ -375,15 +382,15 @@ export const EstimateBuilder = () => {
 
       {/* Material Form Modal */}
       {showMaterialForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-          <div className="bg-white rounded-t-xl sm:rounded-xl p-6 w-full max-w-sm">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+          <div className="app-card rounded-t-2xl sm:rounded-2xl p-6 w-full max-w-sm">
+            <h2 className="text-lg font-bold text-white mb-4">
               {editingMaterial ? 'Edit Material' : 'Add Material'}
             </h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="section-title block mb-1">Name</label>
                 <input
                   type="text"
                   value={materialForm.name}
@@ -395,7 +402,7 @@ export const EstimateBuilder = () => {
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Qty</label>
+                  <label className="section-title block mb-1">Qty</label>
                   <input
                     type="number"
                     value={materialForm.quantity}
@@ -404,7 +411,7 @@ export const EstimateBuilder = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                  <label className="section-title block mb-1">Unit</label>
                   <select
                     value={materialForm.unit}
                     onChange={(e) => setMaterialForm(prev => ({ ...prev, unit: e.target.value as any }))}
@@ -422,7 +429,7 @@ export const EstimateBuilder = () => {
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit Price</label>
+                  <label className="section-title block mb-1">Unit Price</label>
                   <input
                     type="number"
                     value={materialForm.unitPrice}
@@ -432,18 +439,18 @@ export const EstimateBuilder = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <label className="section-title block mb-1">Category</label>
                   <select
                     value={materialForm.category}
                     onChange={(e) => setMaterialForm(prev => ({ ...prev, category: e.target.value as any }))}
                     className="w-full input-field"
                   >
-                    <option value="paint">Paint</option>
-                    <option value="primer">Primer</option>
-                    <option value="supply">Supply</option>
-                    <option value="caulk">Caulk</option>
-                    <option value="tape">Tape</option>
-                    <option value="other">Other</option>
+                    <option value="paint">🎨 Paint</option>
+                    <option value="primer">🎯 Primer</option>
+                    <option value="supply">📦 Supply</option>
+                    <option value="caulk">💧 Caulk</option>
+                    <option value="tape">📼 Tape</option>
+                    <option value="other">📎 Other</option>
                   </select>
                 </div>
               </div>
@@ -469,15 +476,15 @@ export const EstimateBuilder = () => {
 
       {/* Labor Form Modal */}
       {showLaborForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-          <div className="bg-white rounded-t-xl sm:rounded-xl p-6 w-full max-w-sm">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+          <div className="app-card rounded-t-2xl sm:rounded-2xl p-6 w-full max-w-sm">
+            <h2 className="text-lg font-bold text-white mb-4">
               {editingLabor ? 'Edit Labor' : 'Add Labor'}
             </h2>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label className="section-title block mb-1">Description</label>
                 <input
                   type="text"
                   value={laborForm.description}
@@ -489,7 +496,7 @@ export const EstimateBuilder = () => {
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Painters</label>
+                  <label className="section-title block mb-1">Painters</label>
                   <input
                     type="number"
                     value={laborForm.painters}
@@ -498,7 +505,7 @@ export const EstimateBuilder = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Days</label>
+                  <label className="section-title block mb-1">Days</label>
                   <input
                     type="number"
                     value={laborForm.days}
@@ -510,7 +517,7 @@ export const EstimateBuilder = () => {
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Hours/Day</label>
+                  <label className="section-title block mb-1">Hours/Day</label>
                   <input
                     type="number"
                     value={laborForm.hoursPerDay}
@@ -519,7 +526,7 @@ export const EstimateBuilder = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Rate/Hour</label>
+                  <label className="section-title block mb-1">Rate/Hour</label>
                   <input
                     type="number"
                     value={laborForm.hourlyRate}
@@ -530,14 +537,14 @@ export const EstimateBuilder = () => {
                 </div>
               </div>
               
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-sm text-gray-600">
-                  Estimated: <span className="font-medium">
+              <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
+                <p className="text-sm text-slate-400">
+                  Estimated: <span className="font-medium text-white">
                     {((laborForm.painters || 0) * (laborForm.days || 0) * (laborForm.hoursPerDay || 0)).toFixed(0)} hours
                   </span>
                 </p>
-                <p className="text-sm text-gray-600">
-                  Cost: <span className="font-medium text-gray-900">
+                <p className="text-sm text-slate-400">
+                  Cost: <span className="font-medium text-white">
                     {formatCurrency((laborForm.painters || 0) * (laborForm.days || 0) * (laborForm.hoursPerDay || 0) * (laborForm.hourlyRate || 0))}
                   </span>
                 </p>

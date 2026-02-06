@@ -41,11 +41,9 @@ export const Dashboard = () => {
           </div>
           <button
             onClick={logout}
-            className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center"
+            className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center text-lg"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
+            ↵
           </button>
         </div>
       </header>
@@ -112,36 +110,28 @@ export const Dashboard = () => {
               onClick={() => navigate('/customers/new')}
               className="w-full app-card app-card-hover flex items-center gap-4 group"
             >
-              <div className="w-12 h-12 rounded-xl bg-white text-slate-900 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
+              <div className="w-12 h-12 rounded-xl bg-white text-slate-900 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform text-2xl font-light">
+                +
               </div>
               <div className="text-left flex-1">
                 <p className="font-semibold text-white">New Customer</p>
                 <p className="text-sm text-slate-400">Add a customer and create estimate</p>
               </div>
-              <svg className="w-5 h-5 text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              <span className="text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all text-xl">›</span>
             </button>
 
             <button 
               onClick={() => navigate('/customers')}
               className="w-full app-card app-card-hover flex items-center gap-4 group"
             >
-              <div className="w-12 h-12 rounded-xl bg-slate-800 text-white flex items-center justify-center group-hover:bg-slate-700 transition-colors">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+              <div className="w-12 h-12 rounded-xl bg-slate-800 text-white flex items-center justify-center group-hover:bg-slate-700 transition-colors text-xl">
+                📋
               </div>
               <div className="text-left flex-1">
                 <p className="font-semibold text-white">View Customers</p>
                 <p className="text-sm text-slate-400">Browse and manage customers</p>
               </div>
-              <svg className="w-5 h-5 text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              <span className="text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all text-xl">›</span>
             </button>
           </div>
         </div>

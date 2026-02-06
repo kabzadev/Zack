@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCustomerStore } from '../stores/customerStore';
-import { 
-  ChevronLeft, Phone, Mail, MapPin, FileText, 
-  Edit2, Trash2, Plus, X
-} from 'lucide-react';
 
 export const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,9 +15,9 @@ export const CustomerDetail = () => {
 
   if (!customer) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500 mb-4">Customer not found</p>
+          <p className="text-slate-400 mb-4">Customer not found</p>
           <button
             onClick={() => navigate('/customers')}
             className="btn-primary"
@@ -66,23 +62,33 @@ export const CustomerDetail = () => {
 
   const displayCustomer = isEditing ? editedCustomer : customer;
 
+  // Type config
+  const typeConfig = {
+    'homeowner': { emoji: '🏠', label: 'Homeowner' },
+    'contractor': { emoji: '🔨', label: 'Contractor' },
+    'property-manager': { emoji: '🏢', label: 'Property Manager' },
+    'commercial': { emoji: '🏬', label: 'Commercial' }
+  };
+
+  const type = typeConfig[customer.type];
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-950 pb-24">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
+      <header className="app-header px-5 py-4 sticky top-0 z-50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => navigate('/customers')}
-              className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center text-xl font-medium"
             >
-              <ChevronLeft size={24} />
+              ‹
             </button>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">
+              <h1 className="font-bold text-white text-lg">
                 {customer.firstName} {customer.lastName}
               </h1>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-slate-400">
                 {customer.estimateCount} estimates · ${customer.totalEstimateValue.toLocaleString()} total
               </p>
             </div>
@@ -90,30 +96,47 @@ export const CustomerDetail = () => {
           <div className="flex gap-2">
             <button
               onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-              className={`p-2 rounded-lg ${isEditing ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'} hover:opacity-80`}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all text-lg ${
+                isEditing 
+                  ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' 
+                  : 'bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
             >
-              {isEditing ? 'Save' : <Edit2 size={20} />}
+              {isEditing ? '✓' : '✎'}
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="p-2 bg-red-100 text-red-600 rounded-lg hover:opacity-80"
+              className="w-10 h-10 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all flex items-center justify-center text-lg"
             >
-              <Trash2 size={20} />
+              🗑
             </button>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <div className="p-4 space-y-6">
+      <div className="p-5 space-y-4">
+        {/* Type Badge */}
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{type.emoji}</span>
+          <span className="text-slate-300">{type.label}</span>
+          <span className={`ml-auto px-3 py-1 rounded-full text-xs font-medium ${
+            customer.status === 'active' ? 'bg-green-500/20 text-green-400' :
+            customer.status === 'prospect' ? 'bg-amber-500/20 text-amber-400' :
+            'bg-slate-700 text-slate-400'
+          }`}>
+            {customer.status.charAt(0).toUpperCase() + customer.status.slice(1)}
+          </span>
+        </div>
+
         {/* Contact Info */}
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase mb-4">Contact Information</h2>
+        <div className="app-card">
+          <h2 className="section-title mb-4">Contact Information</h2>
           
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                <Phone size={20} className="text-gray-600" />
+              <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg">
+                📞
               </div>
               {isEditing ? (
                 <input
@@ -124,15 +147,15 @@ export const CustomerDetail = () => {
                 />
               ) : (
                 <div>
-                  <p className="text-sm text-gray-500">Phone</p>
-                  <p className="font-medium text-gray-900">{customer.phone}</p>
+                  <p className="text-sm text-slate-500">Phone</p>
+                  <p className="font-medium text-white">{customer.phone}</p>
                 </div>
               )}
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                <Mail size={20} className="text-gray-600" />
+              <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg">
+                ✉️
               </div>
               {isEditing ? (
                 <input
@@ -144,8 +167,8 @@ export const CustomerDetail = () => {
                 />
               ) : (
                 <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium text-gray-900">{customer.email || '—'}</p>
+                  <p className="text-sm text-slate-500">Email</p>
+                  <p className="font-medium text-white">{customer.email || '—'}</p>
                 </div>
               )}
             </div>
@@ -153,8 +176,8 @@ export const CustomerDetail = () => {
         </div>
 
         {/* Address */}
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase mb-4">Address</h2>
+        <div className="app-card">
+          <h2 className="section-title mb-4">Address</h2>
           
           {isEditing ? (
             <div className="space-y-3">
@@ -191,31 +214,31 @@ export const CustomerDetail = () => {
             </div>
           ) : (
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                <MapPin size={20} className="text-gray-600" />
+              <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg">
+                📍
               </div>
               <div>
-                <p className="font-medium text-gray-900">{customer.address}</p>
-                <p className="text-gray-500">{customer.city}, {customer.state} {customer.zipCode}</p>
+                <p className="font-medium text-white">{customer.address}</p>
+                <p className="text-slate-400">{customer.city}, {customer.state} {customer.zipCode}</p>
               </div>
             </div>
           )}
         </div>
 
         {/* Tags */}
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase mb-4">Tags</h2>
+        <div className="app-card">
+          <h2 className="section-title mb-4">Tags</h2>
           
           <div className="flex flex-wrap gap-2 mb-3">
             {displayCustomer?.tags.map((tag) => (
-              <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm flex items-center gap-1">
-                {tag}
+              <span key={tag} className="px-3 py-1 bg-slate-800 text-slate-300 rounded-full text-sm flex items-center gap-1">
+                #{tag}
                 {isEditing && (
                   <button
                     onClick={() => removeCustomerTag(tag)}
-                    className="text-gray-400 hover:text-red-500"
+                    className="text-slate-500 hover:text-red-400 ml-1"
                   >
-                    <X size={14} />
+                    ×
                   </button>
                 )}
               </span>
@@ -242,17 +265,17 @@ export const CustomerDetail = () => {
                   addCustomerTag(newTag);
                   setNewTag('');
                 }}
-                className="btn-primary py-2"
+                className="btn-primary py-2 px-4 text-lg"
               >
-                <Plus size={20} />
+                +
               </button>
             </div>
           )}
         </div>
 
         {/* Notes */}
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase mb-4">Notes</h2>
+        <div className="app-card">
+          <h2 className="section-title mb-4">Notes</h2>
           
           {isEditing ? (
             <textarea
@@ -262,26 +285,26 @@ export const CustomerDetail = () => {
               placeholder="Add notes about this customer..."
             />
           ) : (
-            <p className="text-gray-600">{customer.notes || 'No notes added.'}</p>
+            <p className="text-slate-400">{customer.notes || 'No notes added.'}</p>
           )}
         </div>
 
         {/* Estimates */}
-        <div className="card">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase mb-4">Estimates</h2>
+        <div className="app-card">
+          <h2 className="section-title mb-4">Estimates</h2>
           
           <div className="text-center py-8">
-            <FileText size={48} className="text-gray-300 mx-auto mb-3" />
+            <div className="text-5xl mb-3">📋</div>
             {customer.estimateCount === 0 ? (
-              <p className="text-gray-500 mb-3">No estimates yet</p>
+              <p className="text-slate-400 mb-3">No estimates yet</p>
             ) : (
-              <p className="text-gray-500 mb-3">{customer.estimateCount} estimates · ${customer.totalEstimateValue.toLocaleString()} total</p>
+              <p className="text-slate-400 mb-3">{customer.estimateCount} estimates · ${customer.totalEstimateValue.toLocaleString()} total</p>
             )}
             <button
               onClick={() => navigate(`/estimates/new?customer=${customer.id}`)}
               className="btn-primary"
             >
-              <Plus size={18} className="mr-2" />
+              <span className="mr-2">+</span>
               New Estimate
             </button>
           </div>
@@ -290,10 +313,10 @@ export const CustomerDetail = () => {
 
       {/* Delete Confirmation */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 max-w-sm w-full">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Delete Customer?</h2>
-            <p className="text-gray-500 mb-6">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="app-card max-w-sm w-full">
+            <h2 className="text-xl font-bold text-white mb-2">Delete Customer?</h2>
+            <p className="text-slate-400 mb-6">
               This will permanently delete {customer.firstName} {customer.lastName} and all associated data.
             </p>
             <div className="flex gap-3">
@@ -305,7 +328,7 @@ export const CustomerDetail = () => {
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 bg-red-600 text-white font-semibold py-3 rounded-lg hover:bg-red-700"
+                className="flex-1 bg-red-500 text-white font-semibold py-3 rounded-lg hover:bg-red-600 transition-colors"
               >
                 Delete
               </button>
