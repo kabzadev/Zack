@@ -31,9 +31,9 @@ export const FloatingAssistant = () => {
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
-  // Client tools — handle agent tool calls in the browser
+  // Client tools — stable references via useRef to survive re-renders
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const clientToolHandlers: Record<string, (params: any) => Promise<string>> = {
+  const toolHandlersRef = useRef<Record<string, (params: any) => Promise<string>>>({
     show_colors: async (params: { search?: string }) => {
       const search = params?.search || '';
       telemetry.assistant('tool:show_colors', { search });
@@ -49,10 +49,24 @@ export const FloatingAssistant = () => {
       navigateRef.current(route);
       return `Navigated to ${page}.`;
     },
-  };
+  });
+
+  // Stable wrapper functions that delegate to ref — so the identity never changes
+  const clientTools = useRef({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    show_colors: async (params: any) => {
+      telemetry.assistant('tool:show_colors_called', { params, hasHandler: !!toolHandlersRef.current.show_colors });
+      return toolHandlersRef.current.show_colors(params);
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    navigate: async (params: any) => {
+      telemetry.assistant('tool:navigate_called', { params, hasHandler: !!toolHandlersRef.current.navigate });
+      return toolHandlersRef.current.navigate(params);
+    },
+  }).current;
 
   const conversation = useConversation({
-    clientTools: clientToolHandlers,
+    clientTools,
     onConnect: () => {
       telemetry.assistant('connected');
       setError(null);
@@ -69,6 +83,9 @@ export const FloatingAssistant = () => {
       telemetry.error('assistant:error', { msg, context: String(context) });
       console.error('[Assistant] Error:', msg, context);
       setError(String(msg));
+    },
+    onStatusChange: ({ status }: { status: string }) => {
+      telemetry.assistant('status_change', { status });
     },
     onUnhandledClientToolCall: (toolCall: { tool_name: string; tool_call_id: string; parameters: unknown }) => {
       telemetry.error('assistant:unhandled_tool', { toolName: toolCall.tool_name, params: toolCall.parameters });
