@@ -75,14 +75,14 @@ export const Dashboard = () => {
         <div className="animate-fade-in-up" style={{ animationDelay: '250ms' }}>
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Quick Actions</p>
           <div className="space-y-3">
-            <Card variant="clickable" onClick={() => navigate('/estimates/new')}>
+            <Card variant="clickable" onClick={() => navigate('/voice-estimate')}>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/25">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/25">
                   <Mic size={22} />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-white">New Estimate</p>
-                  <p className="text-sm text-slate-400">Voice-powered estimating</p>
+                  <p className="font-semibold text-white">Voice Estimate</p>
+                  <p className="text-sm text-slate-400">Talk to Damon, our AI assistant</p>
                 </div>
                 <ChevronRight size={20} className="text-slate-600" />
               </div>

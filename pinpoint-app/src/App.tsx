@@ -7,6 +7,8 @@ import { CustomerList } from './pages/CustomerList';
 import { CustomerDetail } from './pages/CustomerDetail';
 import { NewCustomer } from './pages/NewCustomer';
 import { EstimateBuilder } from './pages/EstimateBuilder';
+import { ColorPickerPage } from './pages/ColorPickerPage';
+import { VoiceEstimate } from './pages/VoiceEstimate';
 import { useAuthStore } from './stores/authStore';
 import { useEffect, useState } from 'react';
 import './App.css';
@@ -103,6 +105,14 @@ function AppContent() {
           <Route 
             path="/customers/:id" 
             element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <CustomerDetail /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/colors" 
+            element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <ColorPickerPage /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/voice-estimate" 
+            element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <VoiceEstimate /> : <Navigate to="/login" replace />} 
           />
           <Route 
             path="/estimates" 

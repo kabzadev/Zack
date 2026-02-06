@@ -1,59 +1,59 @@
-import { Pool } from 'pg';
-import dotenv from 'dotenv';
+import Database from 'better-sqlite3';
+import path from 'path';
+import { randomUUID } from 'crypto';
 
-dotenv.config();
+const DB_PATH = path.join(__dirname, '..', '..', 'pinpoint.db');
 
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'pinpoint_db',
-  password: process.env.DB_PASSWORD || 'password',
-  port: parseInt(process.env.DB_PORT || '5432'),
-});
+const db = new Database(DB_PATH);
 
-export default pool;
+// Enable WAL mode for better performance
+db.pragma('journal_mode = WAL');
+
+// Helper to generate UUIDs (SQLite doesn't have gen_random_uuid)
+db.function('gen_random_uuid', () => randomUUID());
+
+export default db;
 
 // Initialize database tables
 export const initDatabase = async () => {
-  const client = await pool.connect();
   try {
-    await client.query(`
+    db.exec(`
       CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        phone_number VARCHAR(20) UNIQUE NOT NULL,
-        name VARCHAR(100),
-        role VARCHAR(20) DEFAULT 'estimator',
-        status VARCHAR(20) DEFAULT 'pending',
-        requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        approved_at TIMESTAMP,
-        approved_by UUID,
-        last_login_at TIMESTAMP,
+        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))),
+        phone_number TEXT UNIQUE NOT NULL,
+        name TEXT,
+        role TEXT DEFAULT 'estimator',
+        status TEXT DEFAULT 'pending',
+        requested_at TEXT DEFAULT (datetime('now')),
+        approved_at TEXT,
+        approved_by TEXT,
+        last_login_at TEXT,
         login_count INTEGER DEFAULT 0,
         estimates_created INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
       );
 
       CREATE TABLE IF NOT EXISTS device_sessions (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        device_name VARCHAR(100),
-        device_type VARCHAR(20),
-        refresh_token VARCHAR(255) UNIQUE,
-        ip_address VARCHAR(45),
+        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))),
+        user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+        device_name TEXT,
+        device_type TEXT,
+        refresh_token TEXT UNIQUE,
+        ip_address TEXT,
         user_agent TEXT,
-        is_active BOOLEAN DEFAULT true,
-        last_active_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        is_active INTEGER DEFAULT 1,
+        last_active_at TEXT DEFAULT (datetime('now')),
+        created_at TEXT DEFAULT (datetime('now'))
       );
 
       CREATE TABLE IF NOT EXISTS otp_attempts (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        phone_number VARCHAR(20) NOT NULL,
-        otp_code VARCHAR(10),
-        expires_at TIMESTAMP,
+        id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))),
+        phone_number TEXT NOT NULL,
+        otp_code TEXT,
+        expires_at TEXT,
         attempts INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT DEFAULT (datetime('now'))
       );
 
       CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone_number);
@@ -61,12 +61,10 @@ export const initDatabase = async () => {
       CREATE INDEX IF NOT EXISTS idx_sessions_token ON device_sessions(refresh_token);
       CREATE INDEX IF NOT EXISTS idx_otp_phone ON otp_attempts(phone_number);
     `);
-    
-    console.log('Database initialized successfully');
+
+    console.log('SQLite database initialized successfully');
   } catch (error) {
     console.error('Database initialization error:', error);
     throw error;
-  } finally {
-    client.release();
   }
 };

@@ -18,7 +18,9 @@ app.use(helmet());
 // CORS - allow Tailscale and local access
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:4173',
   'http://100.88.213.43:5173',
+  'http://100.88.213.43:4173',
   'http://100.88.213.43:3001',
   process.env.FRONTEND_URL
 ].filter((o): o is string => !!o);

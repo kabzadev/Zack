@@ -11,3 +11,5 @@ export { EmptyState } from './EmptyState';
 export { StatCard } from './StatCard';
 export { Input } from './Input';
 export { SearchBar } from './SearchBar';
+export { ColorPicker } from './ColorPicker';
+export { ColorSwatch } from './ColorSwatch';

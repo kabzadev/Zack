@@ -12,6 +12,7 @@
     "setup": "cd backend && npm install && cd .. && npm install"
   },
   "dependencies": {
+    "@elevenlabs/react": "^0.14.0",
     "axios": "^1.13.4",
     "lucide-react": "^0.563.0",
     "react": "^19.2.0",

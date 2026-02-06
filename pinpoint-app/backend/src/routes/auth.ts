@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express';
-import pool from '../config/database';
-import { sendOTP, verifyOTP, formatPhoneDisplay } from '../utils/twilio';
+import db from '../config/database';
+import { sendOTP, verifyOTP } from '../utils/twilio';
 import { generateTokens, TokenPayload } from '../utils/jwt';
+import { randomUUID } from 'crypto';
 
 const router = express.Router();
 
@@ -9,17 +10,17 @@ const router = express.Router();
 router.post('/request-otp', async (req: Request, res: Response) => {
   try {
     const { phoneNumber } = req.body;
-    
+
     if (!phoneNumber) {
       return res.status(400).json({ error: 'Phone number required' });
     }
-    
+
     const sent = await sendOTP(phoneNumber);
-    
+
     if (!sent) {
       return res.status(500).json({ error: 'Failed to send OTP' });
     }
-    
+
     res.json({ success: true, message: 'OTP sent successfully' });
   } catch (error) {
     console.error('Request OTP error:', error);
@@ -31,48 +32,38 @@ router.post('/request-otp', async (req: Request, res: Response) => {
 router.post('/verify-otp', async (req: Request, res: Response) => {
   try {
     const { phoneNumber, code, deviceName, deviceType } = req.body;
-    
+
     if (!phoneNumber || !code) {
       return res.status(400).json({ error: 'Phone number and code required' });
     }
-    
+
     // Verify OTP with Twilio
     const isValid = await verifyOTP(phoneNumber, code);
-    
+
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid or expired code' });
     }
-    
+
     // Check if user exists
-    const userResult = await pool.query(
-      'SELECT * FROM users WHERE phone_number = $1',
-      [phoneNumber]
-    );
-    
-    let user = userResult.rows[0];
+    let user = db.prepare('SELECT * FROM users WHERE phone_number = ?').get(phoneNumber) as any;
     let isNewUser = false;
-    
+
     if (!user) {
       // Create new user with pending status
-      const newUserResult = await pool.query(
-        `INSERT INTO users (phone_number, name, status, requested_at) 
-         VALUES ($1, $2, 'pending', CURRENT_TIMESTAMP) 
-         RETURNING *`,
-        [phoneNumber, null]
-      );
-      user = newUserResult.rows[0];
+      const id = randomUUID();
+      db.prepare(
+        `INSERT INTO users (id, phone_number, name, status, requested_at) VALUES (?, ?, ?, 'pending', datetime('now'))`
+      ).run(id, phoneNumber, null);
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
       isNewUser = true;
     }
-    
+
     // Check user status
     if (user.status === 'suspended' || user.status === 'inactive') {
-      return res.status(403).json({ 
-        error: 'Account suspended',
-        status: user.status 
-      });
+      return res.status(403).json({ error: 'Account suspended', status: user.status });
     }
-    
-    // If pending, return pending status (don't issue tokens yet)
+
+    // If pending, return pending status
     if (user.status === 'pending') {
       return res.json({
         success: true,
@@ -82,34 +73,30 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
           id: user.id,
           phoneNumber: user.phone_number,
           status: user.status,
-          requestedAt: user.requested_at
-        }
+          requestedAt: user.requested_at,
+        },
       });
     }
-    
+
     // User is approved - generate tokens
     const payload: TokenPayload = {
       userId: user.id,
       phoneNumber: user.phone_number,
       role: user.role,
-      status: user.status
+      status: user.status,
     };
-    
+
     const { accessToken, refreshToken } = generateTokens(payload);
-    
+
     // Store device session
-    await pool.query(
-      `INSERT INTO device_sessions (user_id, device_name, device_type, refresh_token, ip_address, user_agent)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [user.id, deviceName || 'Unknown', deviceType || 'mobile', refreshToken, req.ip, req.headers['user-agent']]
-    );
-    
+    const sessionId = randomUUID();
+    db.prepare(
+      `INSERT INTO device_sessions (id, user_id, device_name, device_type, refresh_token, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(sessionId, user.id, deviceName || 'Unknown', deviceType || 'mobile', refreshToken, req.ip, req.headers['user-agent']);
+
     // Update user login stats
-    await pool.query(
-      'UPDATE users SET last_login_at = CURRENT_TIMESTAMP, login_count = login_count + 1 WHERE id = $1',
-      [user.id]
-    );
-    
+    db.prepare("UPDATE users SET last_login_at = datetime('now'), login_count = login_count + 1 WHERE id = ?").run(user.id);
+
     res.json({
       success: true,
       status: 'approved',
@@ -119,9 +106,9 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
         phoneNumber: user.phone_number,
         name: user.name,
         role: user.role,
-        status: user.status
+        status: user.status,
       },
-      isNewUser
+      isNewUser,
     });
   } catch (error) {
     console.error('Verify OTP error:', error);
@@ -133,51 +120,34 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
 router.post('/refresh', async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body;
-    
+
     if (!refreshToken) {
       return res.status(400).json({ error: 'Refresh token required' });
     }
-    
-    // Check if refresh token exists and is active
-    const sessionResult = await pool.query(
-      'SELECT * FROM device_sessions WHERE refresh_token = $1 AND is_active = true',
-      [refreshToken]
-    );
-    
-    if (sessionResult.rows.length === 0) {
+
+    const session = db.prepare('SELECT * FROM device_sessions WHERE refresh_token = ? AND is_active = 1').get(refreshToken) as any;
+
+    if (!session) {
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
-    
-    const userId = sessionResult.rows[0].user_id;
-    
-    // Get user details
-    const userResult = await pool.query(
-      'SELECT * FROM users WHERE id = $1',
-      [userId]
-    );
-    
-    if (userResult.rows.length === 0) {
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(session.user_id) as any;
+
+    if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
-    
-    const user = userResult.rows[0];
-    
-    // Generate new tokens
+
     const payload: TokenPayload = {
       userId: user.id,
       phoneNumber: user.phone_number,
       role: user.role,
-      status: user.status
+      status: user.status,
     };
-    
+
     const tokens = generateTokens(payload);
-    
-    // Update session with new refresh token
-    await pool.query(
-      'UPDATE device_sessions SET refresh_token = $1, last_active_at = CURRENT_TIMESTAMP WHERE refresh_token = $2',
-      [tokens.refreshToken, refreshToken]
-    );
-    
+
+    db.prepare("UPDATE device_sessions SET refresh_token = ?, last_active_at = datetime('now') WHERE refresh_token = ?").run(tokens.refreshToken, refreshToken);
+
     res.json({ tokens });
   } catch (error) {
     console.error('Refresh token error:', error);
@@ -189,27 +159,27 @@ router.post('/refresh', async (req: Request, res: Response) => {
 router.get('/status', async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.json({ authenticated: false });
     }
-    
+
     const token = authHeader.substring(7);
     const { verifyAccessToken } = await import('../utils/jwt');
     const payload = verifyAccessToken(token);
-    
+
     if (!payload) {
       return res.json({ authenticated: false });
     }
-    
+
     res.json({
       authenticated: true,
       user: {
         id: payload.userId,
         phoneNumber: payload.phoneNumber,
         role: payload.role,
-        status: payload.status
-      }
+        status: payload.status,
+      },
     });
   } catch (error) {
     res.json({ authenticated: false });
