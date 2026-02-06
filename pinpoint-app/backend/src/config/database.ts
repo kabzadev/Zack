@@ -2,7 +2,12 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { randomUUID } from 'crypto';
 
-const DB_PATH = path.join(__dirname, '..', '..', 'pinpoint.db');
+// In production (containers), use /tmp for writable SQLite; locally use project root
+const DB_PATH = process.env.DB_PATH || (
+  process.env.NODE_ENV === 'production' 
+    ? '/tmp/pinpoint.db' 
+    : path.join(__dirname, '..', '..', 'pinpoint.db')
+);
 
 const db: import('better-sqlite3').Database = new Database(DB_PATH);
 
