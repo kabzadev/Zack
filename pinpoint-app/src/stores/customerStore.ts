@@ -81,6 +81,24 @@ const demoCustomers: Customer[] = [
     createdAt: '2025-02-06T12:00:00Z',
     updatedAt: '2025-02-06T12:00:00Z'
   },
+  {
+    id: 'demo-cust-001',
+    firstName: 'Sarah',
+    lastName: 'Johnson',
+    email: 'sarah@email.com',
+    phone: '(440) 555-0123',
+    address: '123 Oak Street',
+    city: 'Lakewood',
+    state: 'OH',
+    zipCode: '44107',
+    type: 'homeowner',
+    status: 'active',
+    tags: ['Exterior', 'Referral'],
+    estimateCount: 1,
+    totalEstimateValue: 6849.22,
+    createdAt: '2025-01-15T10:00:00Z',
+    updatedAt: '2026-02-05T16:30:00Z'
+  },
 ];
 
 const defaultTags = [
@@ -221,7 +239,7 @@ export const useCustomerStore = create<CustomerState>()(
     }),
     {
       name: 'pinpoint-customers',
-      version: 2, // Bump to force reset of cached data
+      version: 4, // Bump to force reset — fresh demo data with Sarah Johnson
       partialize: (state) => ({ 
         customers: state.customers,
         tags: state.tags 

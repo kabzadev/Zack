@@ -320,7 +320,7 @@ export const useVoiceDraftStore = create<VoiceDraftState>()(
     }),
     {
       name: 'pinpoint-voice-drafts',
-      version: 2, // Bump to force reset
+      version: 3, // Bump to force reset — clear old drafts
       partialize: (state) => ({
         drafts: state.drafts,
         activeDraftId: state.activeDraftId,

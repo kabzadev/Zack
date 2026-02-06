@@ -74,8 +74,52 @@ const isDemoMode = () => {
 };
 
 // Demo data
-// Demo data — clean slate
-const demoEstimates: Estimate[] = [];
+// Demo data — sample estimate matching PDF template
+const demoEstimates: Estimate[] = [
+  {
+    id: 'demo-est-001',
+    customerId: 'demo-cust-001',
+    customerName: 'Sarah Johnson',
+    customerAddress: '123 Oak Street, Lakewood, OH 44107',
+    projectName: 'Exterior Repaint',
+    description: 'Complete exterior repaint including front elevation, both side walls, rear wall, and garage. Includes trim work, window frames, front door, and accent details. All surfaces shall receive proper preparation prior to coating application.',
+    scopeOfWork: [
+      'Patch nail holes and stress cracks',
+      'Sand patched areas smooth',
+      'Pressure wash exterior surfaces',
+      'Scrape loose/peeling paint',
+      'Protect landscaping & surfaces',
+      'Caulk gaps in trim and seams',
+      'Prime bare wood where needed',
+      'Daily cleanup and final cleanup',
+    ],
+    materials: [
+      { id: 'mat-1', name: 'SW Duration Home Exterior — Naval (SW 6244), Satin', quantity: 12, unit: 'gallon', unitPrice: 75, category: 'paint' },
+      { id: 'mat-2', name: 'SW Pro-Classic Waterborne — Alabaster (SW 7008), Semi-Gloss', quantity: 4, unit: 'gallon', unitPrice: 68, category: 'paint' },
+      { id: 'mat-3', name: 'SW Emerald Urethane — Gale Force (SW 7605), Gloss', quantity: 1, unit: 'gallon', unitPrice: 95, category: 'paint' },
+      { id: 'mat-4', name: 'SW ProBlock Primer', quantity: 4, unit: 'gallon', unitPrice: 45, category: 'primer' },
+      { id: 'mat-5', name: 'Blue Painter\'s Tape', quantity: 12, unit: 'roll', unitPrice: 8, category: 'tape' },
+      { id: 'mat-6', name: 'White Caulk', quantity: 8, unit: 'each', unitPrice: 6, category: 'caulk' },
+      { id: 'mat-7', name: 'Drop Cloths', quantity: 6, unit: 'each', unitPrice: 12, category: 'supply' },
+      { id: 'mat-8', name: 'Patching Compound', quantity: 2, unit: 'gallon', unitPrice: 18, category: 'supply' },
+    ],
+    labor: [
+      { id: 'lab-1', description: 'Exterior Painting — Body & Siding', painters: 3, days: 2, hoursPerDay: 8, hourlyRate: 70 },
+      { id: 'lab-2', description: 'Trim, Fascia & Door Detail Work', painters: 2, days: 1.5, hoursPerDay: 8, hourlyRate: 70 },
+    ],
+    materialMarkupPercent: 20,
+    taxRate: 8,
+    status: 'sent' as const,
+    createdAt: '2026-02-05T14:00:00.000Z',
+    updatedAt: '2026-02-05T16:30:00.000Z',
+    sentAt: '2026-02-05T16:30:00.000Z',
+    subtotalMaterials: 1396,
+    subtotalLabor: 5040,
+    markupAmount: 279.20,
+    taxAmount: 134.02,
+    total: 6849.22,
+  },
+];
 
 const defaultMaterials = [
   { name: 'Sherwin-Williams Duration Exterior', category: 'paint' as const, unit: 'gallon' as const, unitPrice: 75 },
@@ -335,10 +379,10 @@ export const useEstimateStore = create<EstimateState>()(
     }),
     {
       name: 'pinpoint-estimates',
-      version: 2, // Bump to force reset
+      version: 4, // Bump to force reset — seed demo estimate
       partialize: (state) => ({ estimates: state.estimates }),
       migrate: () => ({
-        estimates: [],
+        estimates: isDemoMode() ? demoEstimates : [],
       }),
     }
   )
