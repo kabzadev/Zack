@@ -9,7 +9,7 @@ export const Dashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { customers } = useCustomerStore();
-  const { estimates, getRecentEstimates } = useEstimateStore();
+  const { estimates, getRecentEstimates, getEstimatesByCustomer } = useEstimateStore();
 
   const recentEstimates = getRecentEstimates(5);
   const recentCustomers = customers
@@ -206,7 +206,7 @@ export const Dashboard = () => {
                       <p className="text-xs text-slate-500">{c.city}, {c.state}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-medium text-slate-400">{c.estimateCount}</p>
+                      <p className="text-sm font-medium text-slate-400">{getEstimatesByCustomer(c.id).length}</p>
                       <p className="text-xs text-slate-600">estimates</p>
                     </div>
                   </div>

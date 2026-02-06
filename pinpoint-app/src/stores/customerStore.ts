@@ -94,8 +94,8 @@ const demoCustomers: Customer[] = [
     type: 'homeowner',
     status: 'active',
     tags: ['Exterior', 'Referral'],
-    estimateCount: 1,
-    totalEstimateValue: 6849.22,
+    estimateCount: 0,
+    totalEstimateValue: 0,
     createdAt: '2025-01-15T10:00:00Z',
     updatedAt: '2026-02-05T16:30:00Z'
   },

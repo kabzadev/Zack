@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerStore, type CustomerFilters, type CustomerType, type CustomerStatus } from '../stores/customerStore';
+import { useEstimateStore } from '../stores/estimateStore';
 import { Layout, Card, Badge, SearchBar, EmptyState, PageHeader } from '../components';
 import { Plus } from 'lucide-react';
 
@@ -20,6 +21,7 @@ const statusConfig: Record<CustomerStatus, { variant: 'success' | 'warning' | 'n
 export const CustomerList = () => {
   const navigate = useNavigate();
   const { customers, tags, searchCustomers } = useCustomerStore();
+  const { getEstimatesByCustomer } = useEstimateStore();
 
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -144,7 +146,7 @@ export const CustomerList = () => {
                       )}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className="text-xl font-bold text-white">{c.estimateCount}</p>
+                      <p className="text-xl font-bold text-white">{getEstimatesByCustomer(c.id).length}</p>
                       <p className="text-xs text-slate-600">estimates</p>
                     </div>
                   </div>
