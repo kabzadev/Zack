@@ -25,6 +25,9 @@ const allowedOrigins = [
   process.env.FRONTEND_URL
 ].filter((o): o is string => !!o);
 
+// Also allow any loca.lt tunnel origin
+
+
 app.use(cors({
   origin: function(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     // Allow requests with no origin (mobile apps, curl, etc)

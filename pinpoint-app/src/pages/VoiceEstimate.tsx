@@ -14,7 +14,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
-const AGENT_ID = 'agent_2501k5knax1rekftdrkq7cbv64kc';
+const AGENT_ID = 'agent_0101kgrqw8nxenkrabks597t1nf8';
 
 type PageState = 'idle' | 'recording' | 'review';
 
