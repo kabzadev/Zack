@@ -61,7 +61,16 @@ export const VoiceEstimate = () => {
     setEstimateData(data);
     setShowAgent(false);
     setPageState('review');
-  }, []);
+    
+    // Auto-create estimate if we have enough data
+    const pct = store.getCompletionPercent(data.draft.id);
+    if (pct >= 80) {
+      // Delay slightly so user sees the review briefly
+      setTimeout(() => {
+        // Will be handled by the review page's auto-create
+      }, 100);
+    }
+  }, [store]);
 
   const handleCloseAgent = useCallback(() => {
     setShowAgent(false);
@@ -80,10 +89,11 @@ export const VoiceEstimate = () => {
       d.propertyAddress || ''
     );
 
-    // Build project name from areas
-    const projectName = d.projectType
+    // Build project name: "Keith Kabza — Interior Paint" or "Customer — Exterior"
+    const typePart = d.projectType
       ? `${d.projectType.charAt(0).toUpperCase() + d.projectType.slice(1)} Paint${d.areas.length > 0 ? ` — ${d.areas.slice(0, 3).join(', ')}` : ''}`
-      : d.areas.length > 0 ? d.areas.slice(0, 3).join(', ') : 'Voice Estimate';
+      : d.areas.length > 0 ? d.areas.slice(0, 3).join(', ') : 'Paint Estimate';
+    const projectName = d.customerName ? `${d.customerName} — ${typePart}` : typePart;
 
     // Convert voice draft paint items to material items
     const materials = d.paintItems.map((p, i) => ({

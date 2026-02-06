@@ -453,7 +453,21 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     onDisconnect: () => {
       console.log('[Voice] Disconnected');
       const id = currentDraftIdRef.current;
-      if (id) extractFields(id, transcriptRef.current);
+      if (id) {
+        extractFields(id, transcriptRef.current);
+        // Auto-trigger finish if we have enough data
+        const pct = storeRef.current.getCompletionPercent(id);
+        if (pct >= 80 && !hasExtractedRef.current) {
+          hasExtractedRef.current = true;
+          const draft = storeRef.current.getDraftById(id);
+          if (draft) {
+            const fullTranscript = transcriptRef.current
+              .map(t => `${t.role === 'user' ? 'You' : 'Agent'}: ${t.message}`)
+              .join('\n');
+            onEstimateReady({ draft, rawTranscript: fullTranscript });
+          }
+        }
+      }
     },
     onMessage: (props: { message: string; source: string }) => {
       const role = props.source === 'user' ? 'user' as const : 'agent' as const;
@@ -461,9 +475,21 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       setTranscript(prev => [...prev, entry]);
       const id = currentDraftIdRef.current;
       if (id) {
-        store.addConversationEntry(id, entry);
+        storeRef.current.addConversationEntry(id, entry);
         // Extract after each message for live updates
         extractFields(id, [...transcriptRef.current, entry]);
+      }
+
+      // Detect when the agent signals the estimate is complete
+      if (role === 'agent') {
+        const lower = props.message.toLowerCase();
+        const doneSignals = ['that covers everything', 'estimate is complete', 'all set', 'we have everything', 'that wraps it up', 'thats everything'];
+        if (doneSignals.some(s => lower.includes(s))) {
+          // Auto-end the call after a brief delay to let the agent finish speaking
+          setTimeout(async () => {
+            try { await conversation.endSession(); } catch {}
+          }, 3000);
+        }
       }
     },
     onError: (message: string) => {

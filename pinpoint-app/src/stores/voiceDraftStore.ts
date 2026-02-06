@@ -79,16 +79,13 @@ export interface VoiceDraft {
   estimateId: string | null;
 }
 
-// Which fields are required for a complete estimate
+// Core fields needed for a usable estimate (fewer = easier to hit 100%)
 const REQUIRED_FIELDS = [
   'customerName',
-  'propertyAddress', 
   'projectType',
-  'areas',
   'numberOfPainters',
   'estimatedDays',
   'hourlyRate',
-  'paintItems',
 ] as const;
 
 interface VoiceDraftState {
@@ -243,16 +240,12 @@ export const useVoiceDraftStore = create<VoiceDraftState>()(
         if (!draft) return [];
         const missing: string[] = [];
         
+        // Only truly required fields
         if (!draft.customerName) missing.push('Customer name');
-        if (!draft.propertyAddress) missing.push('Property address');
-        if (!draft.projectType) missing.push('Project type (interior/exterior/both)');
-        if (draft.areas.length === 0) missing.push('Areas/rooms to paint');
+        if (!draft.projectType) missing.push('Project type');
         if (draft.numberOfPainters == null) missing.push('Number of painters');
         if (draft.estimatedDays == null) missing.push('Estimated days');
         if (draft.hourlyRate == null) missing.push('Hourly rate');
-        if (draft.paintItems.length === 0) missing.push('Paint products & gallons');
-        if (draft.colorAssignments.length === 0) missing.push('Color selections');
-        if (draft.scopeOfWork.length === 0) missing.push('Scope of work / prep details');
         
         return missing;
       },
@@ -295,13 +288,10 @@ export const useVoiceDraftStore = create<VoiceDraftState>()(
         const total = REQUIRED_FIELDS.length;
         
         if (draft.customerName) filled++;
-        if (draft.propertyAddress) filled++;
         if (draft.projectType) filled++;
-        if (draft.areas.length > 0) filled++;
         if (draft.numberOfPainters != null) filled++;
         if (draft.estimatedDays != null) filled++;
         if (draft.hourlyRate != null) filled++;
-        if (draft.paintItems.length > 0) filled++;
         
         return Math.round((filled / total) * 100);
       },
