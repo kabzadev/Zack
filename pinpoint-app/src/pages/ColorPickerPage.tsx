@@ -3,6 +3,7 @@ import { Layout, PageHeader } from '../components';
 import { ColorPicker } from '../components/ColorPicker';
 import { Palette } from 'lucide-react';
 import type { SWColor } from '../data/sherwin-williams-colors';
+import { telemetry } from '../utils/telemetry';
 
 // Zone labels for display
 const ZONE_LABELS: Record<string, string> = {
@@ -24,6 +25,7 @@ export const ColorPickerPage = () => {
   const zoneName = ZONE_LABELS[activeZone] || activeZone;
 
   const handleColorSelect = (color: SWColor) => {
+    telemetry.color('select', { color: color.name, code: color.code, zone: activeZone, returnTo, isSelectionMode });
     if (returnTo) {
       const encoded = encodeURIComponent(JSON.stringify(color));
       navigate(`/${returnTo}?selectedColor=${encoded}`, { replace: true });

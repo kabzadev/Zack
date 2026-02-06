@@ -184,8 +184,14 @@ export const Settings = () => {
           Sign Out
         </Button>
 
-        {/* Version Info */}
-        <div className="text-center pt-4">
+        {/* Debug & Version Info */}
+        <div className="text-center pt-4 space-y-2">
+          <button
+            onClick={() => navigate('/debug')}
+            className="text-xs text-slate-500 hover:text-blue-400 transition-colors underline underline-offset-2"
+          >
+            View Debug Log
+          </button>
           <div className="flex items-center justify-center gap-2 text-slate-600 text-xs">
             <Info size={12} />
             <span>Pinpoint Painting v1.0.0</span>

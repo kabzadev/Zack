@@ -16,6 +16,7 @@ import { AdminUserManagement } from './pages/AdminUserManagement';
 import { Settings } from './pages/Settings';
 import { EstimateList } from './pages/EstimateList';
 import { ProductCatalog } from './pages/ProductCatalog';
+import { DebugLog } from './pages/DebugLog';
 import { FloatingAssistant } from './components/FloatingAssistant';
 import { useAuthStore } from './stores/authStore';
 import { useEffect, useState } from 'react';
@@ -157,6 +158,10 @@ function AppContent() {
           <Route 
             path="/settings" 
             element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <Settings /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/debug" 
+            element={<DebugLog />} 
           />
           
           <Route path="*" element={<Navigate to={fallbackPath} replace />} />

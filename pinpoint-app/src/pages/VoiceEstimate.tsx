@@ -4,6 +4,7 @@ import { Layout, Card, Button } from '../components';
 import { VoiceAgent, type VoiceEstimateData } from '../components/VoiceAgent';
 import { useVoiceDraftStore } from '../stores/voiceDraftStore';
 import { useEstimateStore } from '../stores/estimateStore';
+import { telemetry } from '../utils/telemetry';
 import {
   Mic,
   User,
@@ -40,6 +41,7 @@ export const VoiceEstimate = () => {
   const incompleteDrafts = store.getIncompleteDrafts();
 
   const handleStartNew = useCallback(() => {
+    telemetry.voice('start_new');
     setResumeDraftId(undefined);
     store.setActiveDraft(null);
     setShowAgent(true);
@@ -47,6 +49,7 @@ export const VoiceEstimate = () => {
   }, [store]);
 
   const handleResumeDraft = useCallback((draftId: string) => {
+    telemetry.voice('resume_draft', { draftId });
     setResumeDraftId(draftId);
     store.setActiveDraft(draftId);
     setShowAgent(true);
@@ -54,6 +57,7 @@ export const VoiceEstimate = () => {
   }, [store]);
 
   const handleEstimateReady = useCallback((data: VoiceEstimateData) => {
+    telemetry.voice('estimate_ready', { customer: data.draft?.customerName, rooms: data.draft?.rooms?.length });
     setEstimateData(data);
     setShowAgent(false);
     setPageState('review');

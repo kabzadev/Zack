@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useConversation } from '@elevenlabs/react';
 import { MessageCircle, X, Mic, MicOff, Volume2, Minimize2, Maximize2 } from 'lucide-react';
+import { telemetry } from '../utils/telemetry';
 
 const ASSISTANT_AGENT_ID = 'agent_6601kgsyy9fhe6tsbwhp7mjzv51j';
 
@@ -35,6 +36,7 @@ export const FloatingAssistant = () => {
   const clientToolHandlers: Record<string, (params: any) => Promise<string>> = {
     show_colors: async (params: { search?: string }) => {
       const search = params?.search || '';
+      telemetry.assistant('tool:show_colors', { search });
       setMessages(prev => [...prev, { role: 'system', text: `🎨 Showing ${search} colors...` }]);
       navigateRef.current(`/colors?search=${encodeURIComponent(search)}`);
       return `Opened the color picker filtered to "${search}" colors.`;
@@ -42,6 +44,7 @@ export const FloatingAssistant = () => {
     navigate: async (params: { page?: string }) => {
       const page = params?.page?.toLowerCase() || 'home';
       const route = pageRoutes[page] || '/';
+      telemetry.assistant('tool:navigate', { page, route });
       setMessages(prev => [...prev, { role: 'system', text: `📱 Opening ${page}...` }]);
       navigateRef.current(route);
       return `Navigated to ${page}.`;
@@ -50,17 +53,25 @@ export const FloatingAssistant = () => {
 
   const conversation = useConversation({
     clientTools: clientToolHandlers,
-    onConnect: () => setError(null),
-    onDisconnect: () => {},
+    onConnect: () => {
+      telemetry.assistant('connected');
+      setError(null);
+    },
+    onDisconnect: () => {
+      telemetry.assistant('disconnected');
+    },
     onMessage: (props: { message: string; source: string }) => {
       const role = props.source === 'user' ? 'user' as const : 'agent' as const;
+      telemetry.assistant('message', { source: props.source, length: props.message.length, preview: props.message.slice(0, 80) });
       setMessages(prev => [...prev, { role, text: props.message }]);
     },
     onError: (msg: string, context?: unknown) => {
+      telemetry.error('assistant:error', { msg, context: String(context) });
       console.error('[Assistant] Error:', msg, context);
       setError(String(msg));
     },
     onUnhandledClientToolCall: (toolCall: { tool_name: string; tool_call_id: string; parameters: unknown }) => {
+      telemetry.error('assistant:unhandled_tool', { toolName: toolCall.tool_name, params: toolCall.parameters });
       console.warn('[Assistant] Unhandled client tool call:', toolCall);
       setError(`Tool "${toolCall.tool_name}" not found`);
     },

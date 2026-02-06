@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Layout } from '../components';
 import { PageHeader } from '../components/PageHeader';
 import { PhotoUploader } from '../components/PhotoUploader';
+import { telemetry } from '../utils/telemetry';
 import {
   Palette,
   Sparkles,
@@ -69,10 +70,13 @@ export const PhotoCapture = () => {
       try {
         const color: SWColor = JSON.parse(decodeURIComponent(returnedColor));
         const zone = savedActiveZone || 'body';
+        telemetry.color('returned_from_picker', { color: color.name, code: color.code, zone });
         setZones(prev => prev.map(z => z.id === zone ? { ...z, color } : z));
         // Clear the URL param
         navigate('/photo-capture', { replace: true });
-      } catch { /* ignore */ }
+      } catch (e) { 
+        telemetry.error('color:return_parse_fail', { raw: returnedColor?.slice(0, 100), error: String(e) });
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [returnedColor]);
@@ -105,6 +109,7 @@ export const PhotoCapture = () => {
     if (!capturedImage) return;
     const assignedZones = zones.filter(z => z.color !== null);
     if (assignedZones.length === 0) return;
+    telemetry.color('visualize', { zones: assignedZones.map(z => ({ id: z.id, color: z.color?.name })) });
 
     sessionStorage.setItem('visualizer-image', capturedImage);
     sessionStorage.setItem('visualizer-zones', JSON.stringify(
