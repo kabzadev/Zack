@@ -14,6 +14,7 @@ import { AIVisualization } from './pages/AIVisualization';
 import { AdminPanel } from './pages/AdminPanel';
 import { AdminUserManagement } from './pages/AdminUserManagement';
 import { Settings } from './pages/Settings';
+import { EstimateList } from './pages/EstimateList';
 import { useAuthStore } from './stores/authStore';
 import { useEffect, useState } from 'react';
 import './App.css';
@@ -129,7 +130,7 @@ function AppContent() {
           />
           <Route 
             path="/estimates" 
-            element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <Navigate to="/" replace /> : <Navigate to="/login" replace />} 
+            element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <EstimateList /> : <Navigate to="/login" replace />} 
           />
           <Route 
             path="/estimates/new" 

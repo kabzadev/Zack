@@ -5,8 +5,8 @@ import { persist } from 'zustand/middleware';
  * Voice Estimate Draft Store
  * 
  * Persists partial estimate data collected through voice conversations.
- * Allows the user to start a conversation, leave, and come back to continue.
- * Each draft tracks what's been collected and the full conversation history.
+ * Maps directly to the fields in EstimateBuilder so data flows cleanly.
+ * Allows pause/resume — user can leave and come back.
  */
 
 export interface VoiceConversationEntry {
@@ -15,65 +15,132 @@ export interface VoiceConversationEntry {
   timestamp: number;
 }
 
+export interface PaintLineItem {
+  area: string;       // "exterior body", "trim", "doors", "ceiling", "living room walls"
+  product: string;    // "Duration", "SuperPaint", "ProClassic", "Emerald"
+  gallons: number;
+  finish: string;     // "flat", "matte", "satin", "semi-gloss", "gloss"
+  color: string;      // "Naval SW 6244", "Alabaster SW 7008"
+  coats: number;      // default 2
+  pricePerGallon: number;
+}
+
+export interface AddOnItem {
+  description: string;  // "carpentry repairs", "wallpaper removal", "pressure washing"
+  hours: number;
+  rate: number;
+}
+
 export interface VoiceDraft {
   id: string;
   createdAt: string;
   updatedAt: string;
   
-  // Collected estimate fields (null = not yet collected)
+  // === Customer Info ===
   customerName: string | null;
   propertyAddress: string | null;
+  customerPhone: string | null;
+  customerEmail: string | null;
+  
+  // === Project Scope ===
   projectType: 'interior' | 'exterior' | 'both' | null;
-  numberOfRooms: number | null;
-  colors: string[];  // SW color names/codes mentioned
-  squareFootage: number | null;
+  areas: string[];           // ["living room", "kitchen", "hallway", "master bedroom"]
+  scopeOfWork: string[];     // ["patch nail holes", "sand", "caulk gaps", "protect flooring"]
+  
+  // === Labor ===
   numberOfPainters: number | null;
   estimatedDays: number | null;
-  hourlyRate: number | null;
-  gallonsOfPaint: { area: string; gallons: number; product: string }[];
-  addOns: string[];
-  specialNotes: string | null;
+  hoursPerDay: number | null;   // default 8
+  hourlyRate: number | null;    // default 65
+  laborCost: number | null;     // calculated: painters × days × hours × rate
   
-  // Labor calc (derived)
-  laborCost: number | null;
+  // === Materials ===
+  paintItems: PaintLineItem[];
+  materialSubtotal: number | null;
   
-  // Conversation state
+  // === Colors ===
+  colorAssignments: { area: string; color: string; swCode: string }[];
+  
+  // === Add-Ons ===
+  addOns: AddOnItem[];
+  
+  // === Pricing ===
+  materialMarkupPercent: number;  // default 20
+  taxRate: number;                // default 8
+  
+  // === Totals (calculated) ===
+  estimateTotal: number | null;
+  
+  // === Conversation State ===
   conversationHistory: VoiceConversationEntry[];
   isComplete: boolean;
   
-  // Link to a real estimate once created
+  // === Link to real estimate ===
   estimateId: string | null;
 }
+
+// Which fields are required for a complete estimate
+const REQUIRED_FIELDS = [
+  'customerName',
+  'propertyAddress', 
+  'projectType',
+  'areas',
+  'numberOfPainters',
+  'estimatedDays',
+  'hourlyRate',
+  'paintItems',
+] as const;
 
 interface VoiceDraftState {
   drafts: VoiceDraft[];
   activeDraftId: string | null;
   
-  // CRUD
   createDraft: () => VoiceDraft;
   getActiveDraft: () => VoiceDraft | null;
   getDraftById: (id: string) => VoiceDraft | null;
   setActiveDraft: (id: string | null) => void;
-  
-  // Update fields from conversation
-  updateDraftFields: (id: string, fields: Partial<Omit<VoiceDraft, 'id' | 'createdAt' | 'conversationHistory'>>) => void;
-  
-  // Conversation history
+  updateDraftFields: (id: string, fields: Partial<VoiceDraft>) => void;
   addConversationEntry: (id: string, entry: VoiceConversationEntry) => void;
-  
-  // Mark complete / link to estimate
   markComplete: (id: string) => void;
   linkToEstimate: (draftId: string, estimateId: string) => void;
-  
-  // Cleanup
   deleteDraft: (id: string) => void;
   getIncompleteDrafts: () => VoiceDraft[];
-  
-  // Build context summary for the agent
+  getMissingFields: (id: string) => string[];
+  getCollectedFields: (id: string) => string[];
+  getCompletionPercent: (id: string) => number;
   buildAgentContext: (id: string) => string;
+  recalculate: (id: string) => void;
 }
 
 const generateId = () => `vd-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+const createEmptyDraft = (): VoiceDraft => ({
+  id: generateId(),
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  customerName: null,
+  propertyAddress: null,
+  customerPhone: null,
+  customerEmail: null,
+  projectType: null,
+  areas: [],
+  scopeOfWork: [],
+  numberOfPainters: null,
+  estimatedDays: null,
+  hoursPerDay: 8,
+  hourlyRate: 65,
+  laborCost: null,
+  paintItems: [],
+  materialSubtotal: null,
+  colorAssignments: [],
+  addOns: [],
+  materialMarkupPercent: 20,
+  taxRate: 8,
+  estimateTotal: null,
+  conversationHistory: [],
+  isComplete: false,
+  estimateId: null,
+});
 
 export const useVoiceDraftStore = create<VoiceDraftState>()(
   persist(
@@ -82,33 +149,11 @@ export const useVoiceDraftStore = create<VoiceDraftState>()(
       activeDraftId: null,
       
       createDraft: () => {
-        const draft: VoiceDraft = {
-          id: generateId(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          customerName: null,
-          propertyAddress: null,
-          projectType: null,
-          numberOfRooms: null,
-          colors: [],
-          squareFootage: null,
-          numberOfPainters: null,
-          estimatedDays: null,
-          hourlyRate: null,
-          gallonsOfPaint: [],
-          addOns: [],
-          specialNotes: null,
-          laborCost: null,
-          conversationHistory: [],
-          isComplete: false,
-          estimateId: null,
-        };
-        
+        const draft = createEmptyDraft();
         set((state) => ({
           drafts: [draft, ...state.drafts],
           activeDraftId: draft.id,
         }));
-        
         return draft;
       },
       
@@ -118,23 +163,41 @@ export const useVoiceDraftStore = create<VoiceDraftState>()(
         return drafts.find(d => d.id === activeDraftId) || null;
       },
       
-      getDraftById: (id) => {
-        return get().drafts.find(d => d.id === id) || null;
-      },
+      getDraftById: (id) => get().drafts.find(d => d.id === id) || null,
       
-      setActiveDraft: (id) => {
-        set({ activeDraftId: id });
-      },
+      setActiveDraft: (id) => set({ activeDraftId: id }),
       
       updateDraftFields: (id, fields) => {
         set((state) => ({
           drafts: state.drafts.map(d => {
             if (d.id !== id) return d;
             const updated = { ...d, ...fields, updatedAt: new Date().toISOString() };
-            // Recalculate labor cost if we have all the pieces
-            if (updated.numberOfPainters && updated.estimatedDays && updated.hourlyRate) {
-              updated.laborCost = updated.numberOfPainters * updated.estimatedDays * 8 * updated.hourlyRate;
+            
+            // Recalculate labor
+            const painters = updated.numberOfPainters;
+            const days = updated.estimatedDays;
+            const hours = updated.hoursPerDay || 8;
+            const rate = updated.hourlyRate || 65;
+            if (painters && days) {
+              updated.laborCost = painters * days * hours * rate;
             }
+            
+            // Recalculate materials
+            if (updated.paintItems.length > 0) {
+              updated.materialSubtotal = updated.paintItems.reduce(
+                (sum, item) => sum + (item.gallons * item.pricePerGallon), 0
+              );
+            }
+            
+            // Recalculate total
+            const labor = updated.laborCost || 0;
+            const matSub = updated.materialSubtotal || 0;
+            const markup = matSub * (updated.materialMarkupPercent / 100);
+            const matWithMarkup = matSub + markup;
+            const tax = matWithMarkup * (updated.taxRate / 100);
+            const addOnTotal = updated.addOns.reduce((sum, a) => sum + a.hours * a.rate, 0);
+            updated.estimateTotal = labor + matWithMarkup + tax + addOnTotal;
+            
             return updated;
           }),
         }));
@@ -142,14 +205,11 @@ export const useVoiceDraftStore = create<VoiceDraftState>()(
       
       addConversationEntry: (id, entry) => {
         set((state) => ({
-          drafts: state.drafts.map(d => {
-            if (d.id !== id) return d;
-            return {
-              ...d,
-              conversationHistory: [...d.conversationHistory, entry],
-              updatedAt: new Date().toISOString(),
-            };
-          }),
+          drafts: state.drafts.map(d =>
+            d.id === id
+              ? { ...d, conversationHistory: [...d.conversationHistory, entry], updatedAt: new Date().toISOString() }
+              : d
+          ),
         }));
       },
       
@@ -176,64 +236,96 @@ export const useVoiceDraftStore = create<VoiceDraftState>()(
         }));
       },
       
-      getIncompleteDrafts: () => {
-        return get().drafts.filter(d => !d.isComplete && !d.estimateId);
+      getIncompleteDrafts: () => get().drafts.filter(d => !d.isComplete && !d.estimateId),
+      
+      getMissingFields: (id) => {
+        const draft = get().getDraftById(id);
+        if (!draft) return [];
+        const missing: string[] = [];
+        
+        if (!draft.customerName) missing.push('Customer name');
+        if (!draft.propertyAddress) missing.push('Property address');
+        if (!draft.projectType) missing.push('Project type (interior/exterior/both)');
+        if (draft.areas.length === 0) missing.push('Areas/rooms to paint');
+        if (draft.numberOfPainters == null) missing.push('Number of painters');
+        if (draft.estimatedDays == null) missing.push('Estimated days');
+        if (draft.hourlyRate == null) missing.push('Hourly rate');
+        if (draft.paintItems.length === 0) missing.push('Paint products & gallons');
+        if (draft.colorAssignments.length === 0) missing.push('Color selections');
+        if (draft.scopeOfWork.length === 0) missing.push('Scope of work / prep details');
+        
+        return missing;
+      },
+      
+      getCollectedFields: (id) => {
+        const draft = get().getDraftById(id);
+        if (!draft) return [];
+        const collected: string[] = [];
+        
+        if (draft.customerName) collected.push(`Customer: ${draft.customerName}`);
+        if (draft.propertyAddress) collected.push(`Address: ${draft.propertyAddress}`);
+        if (draft.projectType) collected.push(`Type: ${draft.projectType}`);
+        if (draft.areas.length > 0) collected.push(`Areas: ${draft.areas.join(', ')}`);
+        if (draft.numberOfPainters != null) collected.push(`Crew: ${draft.numberOfPainters} painters`);
+        if (draft.estimatedDays != null) collected.push(`Duration: ${draft.estimatedDays} days`);
+        if (draft.hourlyRate != null) collected.push(`Rate: $${draft.hourlyRate}/hr`);
+        if (draft.laborCost != null) collected.push(`Labor: $${draft.laborCost.toLocaleString()}`);
+        if (draft.paintItems.length > 0) {
+          const paintStr = draft.paintItems.map(p => `${p.gallons}gal ${p.product} for ${p.area}`).join('; ');
+          collected.push(`Paint: ${paintStr}`);
+        }
+        if (draft.colorAssignments.length > 0) {
+          const colorStr = draft.colorAssignments.map(c => `${c.area}: ${c.color}`).join('; ');
+          collected.push(`Colors: ${colorStr}`);
+        }
+        if (draft.scopeOfWork.length > 0) collected.push(`Prep: ${draft.scopeOfWork.join(', ')}`);
+        if (draft.addOns.length > 0) {
+          const addStr = draft.addOns.map(a => `${a.description}: ${a.hours}hrs × $${a.rate}`).join('; ');
+          collected.push(`Add-ons: ${addStr}`);
+        }
+        if (draft.estimateTotal != null) collected.push(`Estimate total: $${draft.estimateTotal.toLocaleString()}`);
+        
+        return collected;
+      },
+      
+      getCompletionPercent: (id) => {
+        const draft = get().getDraftById(id);
+        if (!draft) return 0;
+        let filled = 0;
+        const total = REQUIRED_FIELDS.length;
+        
+        if (draft.customerName) filled++;
+        if (draft.propertyAddress) filled++;
+        if (draft.projectType) filled++;
+        if (draft.areas.length > 0) filled++;
+        if (draft.numberOfPainters != null) filled++;
+        if (draft.estimatedDays != null) filled++;
+        if (draft.hourlyRate != null) filled++;
+        if (draft.paintItems.length > 0) filled++;
+        
+        return Math.round((filled / total) * 100);
       },
       
       buildAgentContext: (id) => {
-        const draft = get().getDraftById(id);
-        if (!draft) return '';
-        
-        const collected: string[] = [];
-        const missing: string[] = [];
-        
-        // Check each field
-        if (draft.customerName) collected.push(`Customer: ${draft.customerName}`);
-        else missing.push('customer name');
-        
-        if (draft.propertyAddress) collected.push(`Address: ${draft.propertyAddress}`);
-        else missing.push('property address');
-        
-        if (draft.projectType) collected.push(`Project: ${draft.projectType}`);
-        else missing.push('project type (interior/exterior/both)');
-        
-        if (draft.numberOfRooms != null) collected.push(`Rooms: ${draft.numberOfRooms}`);
-        else missing.push('number of rooms');
-        
-        if (draft.colors.length > 0) collected.push(`Colors: ${draft.colors.join(', ')}`);
-        else missing.push('paint colors');
-        
-        if (draft.squareFootage != null) collected.push(`Square footage: ${draft.squareFootage}`);
-        else missing.push('square footage');
-        
-        if (draft.numberOfPainters != null) collected.push(`Painters: ${draft.numberOfPainters}`);
-        else missing.push('number of painters');
-        
-        if (draft.estimatedDays != null) collected.push(`Days: ${draft.estimatedDays}`);
-        else missing.push('estimated days');
-        
-        if (draft.hourlyRate != null) collected.push(`Rate: $${draft.hourlyRate}/hr`);
-        else missing.push('hourly rate');
-        
-        if (draft.gallonsOfPaint.length > 0) {
-          const gallonStr = draft.gallonsOfPaint.map(g => `${g.gallons}gal ${g.product} (${g.area})`).join(', ');
-          collected.push(`Paint: ${gallonStr}`);
-        } else {
-          missing.push('gallons of paint');
-        }
-        
-        if (draft.laborCost != null) collected.push(`Labor cost: $${draft.laborCost.toLocaleString()}`);
+        const collected = get().getCollectedFields(id);
+        const missing = get().getMissingFields(id);
         
         let context = '';
         if (collected.length > 0) {
-          context += `ALREADY COLLECTED:\n${collected.join('\n')}\n\n`;
+          context += `ALREADY COLLECTED:\n${collected.map(c => `• ${c}`).join('\n')}\n\n`;
         }
         if (missing.length > 0) {
-          context += `STILL NEEDED:\n${missing.join(', ')}\n\n`;
+          context += `STILL NEEDED TO COMPLETE THE ESTIMATE:\n${missing.map(m => `• ${m}`).join('\n')}\n\n`;
         }
-        context += `Ask about the missing items. Do not re-ask what has already been collected. Pick up where we left off.`;
+        context += 'Pick up where we left off. Ask about the missing items ONE at a time. Do NOT re-ask what has been collected. When you have everything, give the full summary with calculated totals.';
         
         return context;
+      },
+      
+      recalculate: (id) => {
+        const draft = get().getDraftById(id);
+        if (!draft) return;
+        get().updateDraftFields(id, {}); // triggers recalc
       },
     }),
     {

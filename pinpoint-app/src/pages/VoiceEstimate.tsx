@@ -6,20 +6,21 @@ import { useVoiceDraftStore } from '../stores/voiceDraftStore';
 import {
   Mic,
   User,
+  MapPin,
   Home,
   Palette,
-  Ruler,
+  Users,
+  DollarSign,
+  Droplets,
   FileText,
   Sparkles,
   ChevronRight,
   RotateCcw,
   Clock,
-  MapPin,
-  Users,
-  Calendar,
-  DollarSign,
-  Droplets,
   Trash2,
+  CheckCircle2,
+  AlertCircle,
+  Wrench,
 } from 'lucide-react';
 
 const AGENT_ID = 'agent_0101kgrqw8nxenkrabks597t1nf8';
@@ -33,59 +34,46 @@ export const VoiceEstimate = () => {
   const [showAgent, setShowAgent] = useState(false);
   const [resumeDraftId, setResumeDraftId] = useState<string | undefined>(undefined);
 
-  const { getIncompleteDrafts, deleteDraft, setActiveDraft, markComplete } = useVoiceDraftStore();
-  const incompleteDrafts = getIncompleteDrafts();
+  const store = useVoiceDraftStore();
+  const incompleteDrafts = store.getIncompleteDrafts();
 
   const handleStartNew = useCallback(() => {
     setResumeDraftId(undefined);
-    setActiveDraft(null);
+    store.setActiveDraft(null);
     setShowAgent(true);
     setPageState('recording');
-  }, [setActiveDraft]);
+  }, [store]);
 
   const handleResumeDraft = useCallback((draftId: string) => {
     setResumeDraftId(draftId);
-    setActiveDraft(draftId);
+    store.setActiveDraft(draftId);
     setShowAgent(true);
     setPageState('recording');
-  }, [setActiveDraft]);
-
-  const handleDeleteDraft = useCallback((draftId: string) => {
-    deleteDraft(draftId);
-  }, [deleteDraft]);
+  }, [store]);
 
   const handleEstimateReady = useCallback((data: VoiceEstimateData) => {
     setEstimateData(data);
     setShowAgent(false);
     setPageState('review');
-    // Mark draft as complete
-    if (data.draftId) {
-      markComplete(data.draftId);
-    }
-  }, [markComplete]);
+  }, []);
 
   const handleCloseAgent = useCallback(() => {
     setShowAgent(false);
-    if (!estimateData) {
-      setPageState('idle');
-    }
+    if (!estimateData) setPageState('idle');
   }, [estimateData]);
 
   const handleCreateEstimate = useCallback(() => {
+    if (!estimateData) return;
+    const d = estimateData.draft;
     const params = new URLSearchParams();
-    if (estimateData) {
-      params.set('voiceName', estimateData.customerName);
-      params.set('voiceAddress', estimateData.propertyAddress);
-      params.set('voiceRooms', String(estimateData.numberOfRooms));
-      params.set('voiceColors', estimateData.paintColors.join(','));
-      params.set('voiceSqft', String(estimateData.squareFootage));
-      params.set('voicePainters', String(estimateData.numberOfPainters));
-      params.set('voiceDays', String(estimateData.estimatedDays));
-      params.set('voiceRate', String(estimateData.hourlyRate));
-      params.set('voiceLabor', String(estimateData.laborCost));
-      params.set('voiceNotes', estimateData.notes);
-      if (estimateData.draftId) params.set('draftId', estimateData.draftId);
-    }
+    if (d.customerName) params.set('voiceName', d.customerName);
+    if (d.propertyAddress) params.set('voiceAddress', d.propertyAddress);
+    if (d.areas.length > 0) params.set('voiceAreas', d.areas.join(','));
+    if (d.numberOfPainters) params.set('voicePainters', String(d.numberOfPainters));
+    if (d.estimatedDays) params.set('voiceDays', String(d.estimatedDays));
+    if (d.hourlyRate) params.set('voiceRate', String(d.hourlyRate));
+    if (d.laborCost) params.set('voiceLabor', String(d.laborCost));
+    params.set('draftId', d.id);
     navigate(`/customers?from=voice&${params.toString()}`);
   }, [estimateData, navigate]);
 
@@ -105,24 +93,11 @@ export const VoiceEstimate = () => {
     return `${Math.floor(hours / 24)}d ago`;
   };
 
-  const summaryItems = estimateData
-    ? [
-        { icon: <User size={18} />, label: 'Customer', value: estimateData.customerName || 'Not mentioned', color: 'text-blue-400', bgColor: 'bg-blue-500/10' },
-        { icon: <MapPin size={18} />, label: 'Address', value: estimateData.propertyAddress || 'Not mentioned', color: 'text-cyan-400', bgColor: 'bg-cyan-500/10' },
-        { icon: <Home size={18} />, label: 'Rooms', value: estimateData.numberOfRooms > 0 ? `${estimateData.numberOfRooms} rooms` : 'Not mentioned', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10' },
-        { icon: <Palette size={18} />, label: 'Colors', value: estimateData.paintColors.length > 0 ? estimateData.paintColors.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(', ') : 'Not mentioned', color: 'text-purple-400', bgColor: 'bg-purple-500/10' },
-        { icon: <Ruler size={18} />, label: 'Square Footage', value: estimateData.squareFootage > 0 ? `${estimateData.squareFootage.toLocaleString()} sq ft` : 'Not mentioned', color: 'text-amber-400', bgColor: 'bg-amber-500/10' },
-        { icon: <Users size={18} />, label: 'Crew', value: estimateData.numberOfPainters > 0 ? `${estimateData.numberOfPainters} painters` : 'Not mentioned', color: 'text-indigo-400', bgColor: 'bg-indigo-500/10' },
-        { icon: <Calendar size={18} />, label: 'Duration', value: estimateData.estimatedDays > 0 ? `${estimateData.estimatedDays} days` : 'Not mentioned', color: 'text-teal-400', bgColor: 'bg-teal-500/10' },
-        { icon: <DollarSign size={18} />, label: 'Rate', value: estimateData.hourlyRate > 0 ? `$${estimateData.hourlyRate}/hr` : 'Not mentioned', color: 'text-green-400', bgColor: 'bg-green-500/10' },
-        { icon: <DollarSign size={18} />, label: 'Labor Cost', value: estimateData.laborCost > 0 ? `$${estimateData.laborCost.toLocaleString()}` : 'Not calculated', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10' },
-        { icon: <Droplets size={18} />, label: 'Paint', value: estimateData.gallonsOfPaint.length > 0 ? estimateData.gallonsOfPaint.map(g => `${g.gallons}gal ${g.product}`).join(', ') : 'Not mentioned', color: 'text-sky-400', bgColor: 'bg-sky-500/10' },
-        { icon: <FileText size={18} />, label: 'Notes', value: estimateData.notes || 'No additional notes', color: 'text-slate-400', bgColor: 'bg-slate-500/10' },
-      ]
-    : [];
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 
   return (
-    <Layout showBack title="Voice Estimate" activeTab="estimates">
+    <Layout activeTab="voice-estimate">
       <div className="px-5 pt-6 pb-32">
         {/* Header */}
         <div className="mb-6 animate-fade-in-up">
@@ -132,7 +107,7 @@ export const VoiceEstimate = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">Voice Estimate</h1>
-              <p className="text-sm text-slate-400">Talk to build your estimate</p>
+              <p className="text-sm text-slate-400">Build estimates by talking</p>
             </div>
           </div>
         </div>
@@ -140,98 +115,107 @@ export const VoiceEstimate = () => {
         {/* Idle State */}
         {pageState === 'idle' && (
           <div className="space-y-6 animate-fade-in-up">
-            {/* Resume drafts */}
+            {/* Resume incomplete drafts */}
             {incompleteDrafts.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
                   <Clock size={14} />
-                  Continue where you left off
+                  In Progress
                 </h3>
                 <div className="space-y-3">
-                  {incompleteDrafts.map((draft) => (
-                    <div
-                      key={draft.id}
-                      className="relative bg-slate-900/60 border border-slate-800/60 rounded-2xl p-4 hover:border-blue-500/30 transition-all"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <p className="text-white font-semibold text-sm">
-                            {draft.customerName || 'Unnamed Customer'}
-                          </p>
-                          {draft.propertyAddress && (
-                            <p className="text-xs text-slate-500 mt-0.5">{draft.propertyAddress}</p>
-                          )}
-                          <p className="text-xs text-slate-600 mt-1">
-                            {draft.conversationHistory.length} messages • {formatTimeAgo(draft.updatedAt)}
-                          </p>
+                  {incompleteDrafts.map((draft) => {
+                    const pct = store.getCompletionPercent(draft.id);
+                    const missing = store.getMissingFields(draft.id);
+                    return (
+                      <div key={draft.id} className="bg-slate-900/60 border border-slate-800/60 rounded-2xl p-4 hover:border-blue-500/30 transition-all">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="text-white font-semibold text-sm">
+                              {draft.customerName || 'Unnamed Estimate'}
+                            </p>
+                            {draft.propertyAddress && (
+                              <p className="text-xs text-slate-500 mt-0.5">{draft.propertyAddress}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => store.deleteDraft(draft.id)}
+                            className="p-2 text-slate-600 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
+
+                        {/* Progress bar */}
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] text-slate-600">{draft.conversationHistory.length} messages • {formatTimeAgo(draft.updatedAt)}</span>
+                            <span className="text-[10px] text-slate-400 font-semibold">{pct}% complete</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                            <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+
+                        {/* What's collected vs missing */}
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {draft.customerName && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-0.5"><CheckCircle2 size={8} /> Customer</span>}
+                          {draft.projectType && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-0.5"><CheckCircle2 size={8} /> {draft.projectType}</span>}
+                          {draft.laborCost != null && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-0.5"><CheckCircle2 size={8} /> {fmt(draft.laborCost)} labor</span>}
+                          {draft.paintItems.length > 0 && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-0.5"><CheckCircle2 size={8} /> {draft.paintItems.reduce((s, p) => s + p.gallons, 0)} gal</span>}
+                          {missing.slice(0, 2).map((m, i) => (
+                            <span key={i} className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-0.5">
+                              <AlertCircle size={8} /> {m}
+                            </span>
+                          ))}
+                        </div>
+
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteDraft(draft.id); }}
-                          className="p-2 text-slate-600 hover:text-red-400 transition-colors"
+                          onClick={() => handleResumeDraft(draft.id)}
+                          className="w-full py-2.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 font-semibold text-sm rounded-xl hover:bg-blue-500/20 transition-all flex items-center justify-center gap-2"
                         >
-                          <Trash2 size={14} />
+                          <Mic size={16} /> Continue Conversation
                         </button>
                       </div>
-                      
-                      {/* What's been collected */}
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {draft.customerName && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Customer ✓</span>}
-                        {draft.projectType && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{draft.projectType} ✓</span>}
-                        {draft.colors.length > 0 && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">Colors ✓</span>}
-                        {draft.numberOfPainters && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">Crew ✓</span>}
-                        {draft.hourlyRate && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-green-500/10 text-green-400 border border-green-500/20">Rate ✓</span>}
-                        {!draft.squareFootage && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">Sq ft needed</span>}
-                        {!draft.numberOfPainters && <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">Crew needed</span>}
-                      </div>
-
-                      <button
-                        onClick={() => handleResumeDraft(draft.id)}
-                        className="w-full py-2.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 font-semibold text-sm rounded-xl hover:bg-blue-500/20 transition-all flex items-center justify-center gap-2"
-                      >
-                        <Mic size={16} />
-                        Continue Conversation
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
 
-            {/* New estimate button */}
+            {/* New estimate mic button */}
             <div className="flex flex-col items-center pt-4">
               <div className="relative mb-8">
                 <div className="absolute inset-0 -m-6 rounded-full bg-blue-500/5 animate-pulse" />
-                <div className="absolute inset-0 -m-3 rounded-full bg-blue-500/10 animate-pulse" style={{ animationDelay: '500ms' }} />
                 <button
                   onClick={handleStartNew}
-                  className="relative w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-[0_16px_64px_rgba(59,130,246,0.4)] hover:shadow-[0_20px_80px_rgba(59,130,246,0.5)] hover:scale-105 active:scale-95 transition-all duration-300"
+                  className="relative w-28 h-28 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-[0_16px_64px_rgba(59,130,246,0.4)] hover:scale-105 active:scale-95 transition-all duration-300"
                 >
-                  <Mic size={48} className="text-white" />
+                  <Mic size={44} className="text-white" />
                 </button>
               </div>
-
               <h2 className="text-xl font-bold text-white mb-2">
-                {incompleteDrafts.length > 0 ? 'Start New Estimate' : 'Start Voice Estimate'}
+                {incompleteDrafts.length > 0 ? 'New Estimate' : 'Start Voice Estimate'}
               </h2>
-              <p className="text-slate-400 text-center text-sm max-w-[300px] leading-relaxed mb-8">
-                The agent will ask about the project — customer, rooms, colors, crew, and materials. Just talk naturally.
+              <p className="text-slate-400 text-center text-sm max-w-[300px] leading-relaxed mb-6">
+                The assistant collects everything: customer info, labor, materials, colors, prep work, and calculates your totals.
               </p>
 
-              {/* How it works */}
               <Card className="w-full">
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">How it works</h3>
-                <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">What it collects</h3>
+                <div className="grid grid-cols-2 gap-2">
                   {[
-                    { step: '1', text: 'Tap the mic to start a conversation' },
-                    { step: '2', text: 'Answer questions about the painting job' },
-                    { step: '3', text: "Leave anytime — your progress is saved" },
-                    { step: '4', text: 'Come back to continue, then create the estimate' },
-                  ].map((item) => (
-                    <div key={item.step} className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-bold text-blue-400">{item.step}</span>
-                      </div>
-                      <p className="text-sm text-slate-300">{item.text}</p>
+                    { icon: <User size={14} />, text: 'Customer & address' },
+                    { icon: <Home size={14} />, text: 'Rooms & areas' },
+                    { icon: <Users size={14} />, text: 'Crew & schedule' },
+                    { icon: <DollarSign size={14} />, text: 'Rate & labor cost' },
+                    { icon: <Droplets size={14} />, text: 'Paint & gallons' },
+                    { icon: <Palette size={14} />, text: 'SW colors' },
+                    { icon: <Wrench size={14} />, text: 'Prep & add-ons' },
+                    { icon: <FileText size={14} />, text: 'Complete estimate' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 text-slate-400 text-xs">
+                      <span className="text-blue-400">{item.icon}</span>
+                      {item.text}
                     </div>
                   ))}
                 </div>
@@ -241,62 +225,111 @@ export const VoiceEstimate = () => {
         )}
 
         {/* Review State */}
-        {pageState === 'review' && estimateData && (
-          <div className="space-y-4 animate-fade-in-up">
-            <div className="flex items-center gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                <Sparkles size={20} className="text-emerald-400" />
-              </div>
-              <div>
-                <p className="font-semibold text-emerald-400 text-sm">Conversation Complete</p>
-                <p className="text-xs text-slate-400">Here&apos;s what was captured from your conversation</p>
-              </div>
-            </div>
+        {pageState === 'review' && estimateData && (() => {
+          const d = estimateData.draft;
+          const missing = store.getMissingFields(d.id);
+          const pct = store.getCompletionPercent(d.id);
+          
+          const items = [
+            { icon: <User size={16} />, label: 'Customer', value: d.customerName || '—', ok: !!d.customerName, color: 'blue' },
+            { icon: <MapPin size={16} />, label: 'Address', value: d.propertyAddress || '—', ok: !!d.propertyAddress, color: 'cyan' },
+            { icon: <Home size={16} />, label: 'Project', value: d.projectType ? `${d.projectType}${d.areas.length > 0 ? ` — ${d.areas.join(', ')}` : ''}` : '—', ok: !!d.projectType, color: 'emerald' },
+            { icon: <Users size={16} />, label: 'Crew', value: d.numberOfPainters ? `${d.numberOfPainters} painters × ${d.estimatedDays || '?'} days × ${d.hoursPerDay || 8}hrs` : '—', ok: !!d.numberOfPainters, color: 'indigo' },
+            { icon: <DollarSign size={16} />, label: 'Rate', value: d.hourlyRate ? `$${d.hourlyRate}/hr` : '—', ok: !!d.hourlyRate, color: 'green' },
+            { icon: <DollarSign size={16} />, label: 'Labor Cost', value: d.laborCost ? fmt(d.laborCost) : '—', ok: !!d.laborCost, color: 'emerald' },
+            { icon: <Droplets size={16} />, label: 'Paint', value: d.paintItems.length > 0 ? d.paintItems.map(p => `${p.gallons}gal ${p.product} (${p.area})`).join(', ') : '—', ok: d.paintItems.length > 0, color: 'purple' },
+            { icon: <Palette size={16} />, label: 'Colors', value: d.colorAssignments.length > 0 ? d.colorAssignments.map(c => `${c.color} ${c.swCode}`).join(', ') : '—', ok: d.colorAssignments.length > 0, color: 'amber' },
+            { icon: <Wrench size={16} />, label: 'Prep Work', value: d.scopeOfWork.length > 0 ? d.scopeOfWork.join(', ') : '—', ok: d.scopeOfWork.length > 0, color: 'slate' },
+          ];
 
-            <Card>
-              <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Estimate Details</h3>
-              <div className="space-y-3">
-                {summaryItems.map((item, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-slate-800/40 border border-slate-700/30">
-                    <div className={`w-9 h-9 rounded-lg ${item.bgColor} flex items-center justify-center flex-shrink-0 ${item.color}`}>
-                      {item.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-500 font-medium mb-0.5">{item.label}</p>
-                      <p className="text-sm text-white font-medium">{item.value}</p>
-                    </div>
+          return (
+            <div className="space-y-4 animate-fade-in-up">
+              {/* Completion banner */}
+              <div className={`flex items-center gap-3 p-4 rounded-2xl border ${
+                pct >= 80 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-amber-500/10 border-amber-500/20'
+              }`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  pct >= 80 ? 'bg-emerald-500/20' : 'bg-amber-500/20'
+                }`}>
+                  {pct >= 80 ? <CheckCircle2 size={20} className="text-emerald-400" /> : <AlertCircle size={20} className="text-amber-400" />}
+                </div>
+                <div>
+                  <p className={`font-semibold text-sm ${pct >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                    {pct >= 80 ? 'Estimate Ready' : `${pct}% Complete — Missing ${missing.length} fields`}
+                  </p>
+                  {missing.length > 0 && (
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Still need: {missing.join(', ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Estimate total */}
+              {d.estimateTotal != null && d.estimateTotal > 0 && (
+                <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-2xl p-5 text-center">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Estimated Total</p>
+                  <p className="text-3xl font-bold text-white">{fmt(d.estimateTotal)}</p>
+                  <div className="flex justify-center gap-4 mt-2 text-xs text-slate-500">
+                    {d.laborCost != null && <span>Labor: {fmt(d.laborCost)}</span>}
+                    {d.materialSubtotal != null && <span>Materials: {fmt(d.materialSubtotal)}</span>}
                   </div>
-                ))}
-              </div>
-            </Card>
+                </div>
+              )}
 
-            {estimateData.rawTranscript && (
+              {/* Detail fields */}
               <Card>
-                <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Conversation Transcript</h3>
-                <div className="max-h-40 overflow-y-auto custom-scrollbar">
-                  <p className="text-xs text-slate-400 whitespace-pre-wrap leading-relaxed">{estimateData.rawTranscript}</p>
+                <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Estimate Details</h3>
+                <div className="space-y-2.5">
+                  {items.map((item, i) => (
+                    <div key={i} className={`flex items-start gap-3 p-3 rounded-xl border ${
+                      item.ok ? 'bg-slate-800/40 border-slate-700/30' : 'bg-amber-500/5 border-amber-500/15'
+                    }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        item.ok ? `bg-${item.color}-500/10 text-${item.color}-400` : 'bg-amber-500/10 text-amber-400'
+                      }`}>
+                        {item.ok ? item.icon : <AlertCircle size={16} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-slate-500 font-medium">{item.label}</p>
+                        <p className={`text-sm font-medium ${item.ok ? 'text-white' : 'text-amber-400/60 italic'}`}>
+                          {item.value}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </Card>
-            )}
 
-            <div className="space-y-3 pt-2">
-              <Button fullWidth size="lg" icon={<ChevronRight size={20} />} onClick={handleCreateEstimate}>
-                Create Estimate
-              </Button>
-              <div className="flex gap-3">
-                <Button variant="secondary" fullWidth icon={<Mic size={18} />} onClick={() => { setResumeDraftId(estimateData.draftId); setShowAgent(true); setPageState('recording'); }}>
-                  Add More Info
+              {/* Transcript */}
+              {estimateData.rawTranscript && (
+                <Card>
+                  <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-3">Transcript</h3>
+                  <div className="max-h-40 overflow-y-auto custom-scrollbar">
+                    <p className="text-xs text-slate-400 whitespace-pre-wrap leading-relaxed">{estimateData.rawTranscript}</p>
+                  </div>
+                </Card>
+              )}
+
+              {/* Actions */}
+              <div className="space-y-3 pt-2">
+                <Button fullWidth size="lg" icon={<ChevronRight size={20} />} onClick={handleCreateEstimate}>
+                  {pct >= 80 ? 'Create Estimate' : 'Create Estimate (Partial)'}
                 </Button>
-                <Button variant="ghost" fullWidth icon={<RotateCcw size={18} />} onClick={handleStartOver}>
-                  Start Over
-                </Button>
+                <div className="flex gap-3">
+                  <Button variant="secondary" fullWidth icon={<Mic size={18} />} onClick={() => { setResumeDraftId(estimateData.draft.id); setShowAgent(true); setPageState('recording'); }}>
+                    {missing.length > 0 ? 'Fill Missing Fields' : 'Add More Info'}
+                  </Button>
+                  <Button variant="ghost" fullWidth icon={<RotateCcw size={18} />} onClick={handleStartOver}>
+                    Start Over
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
 
-      {/* Voice Agent Overlay */}
       <VoiceAgent
         isOpen={showAgent}
         onClose={handleCloseAgent}

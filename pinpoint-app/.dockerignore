@@ -1,0 +1,12 @@
+node_modules
+src
+backend
+*.md
+.git
+.env*
+*.config.ts
+*.config.js
+tsconfig*
+package*.json
+index.html
+public

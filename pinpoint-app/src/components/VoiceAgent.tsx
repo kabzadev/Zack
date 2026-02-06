@@ -1,23 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConversation } from '@elevenlabs/react';
-import { Mic, MicOff, X, Volume2 } from 'lucide-react';
-import { useVoiceDraftStore, type VoiceConversationEntry } from '../stores/voiceDraftStore';
+import { Mic, MicOff, X, Volume2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useVoiceDraftStore, type VoiceConversationEntry, type VoiceDraft } from '../stores/voiceDraftStore';
 
 export interface VoiceEstimateData {
-  customerName: string;
-  propertyAddress: string;
-  projectType: string;
-  numberOfRooms: number;
-  paintColors: string[];
-  squareFootage: number;
-  numberOfPainters: number;
-  estimatedDays: number;
-  hourlyRate: number;
-  laborCost: number;
-  gallonsOfPaint: { area: string; gallons: number; product: string }[];
-  notes: string;
+  draft: VoiceDraft;
   rawTranscript: string;
-  draftId: string;
 }
 
 interface VoiceAgentProps {
@@ -25,7 +13,7 @@ interface VoiceAgentProps {
   onClose: () => void;
   onEstimateReady: (data: VoiceEstimateData) => void;
   agentId: string;
-  draftId?: string; // If resuming an existing draft
+  draftId?: string;
 }
 
 export const VoiceAgent: React.FC<VoiceAgentProps> = ({
@@ -42,159 +30,158 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
   const transcriptRef = useRef<VoiceConversationEntry[]>([]);
   const currentDraftIdRef = useRef<string | null>(null);
 
-  const {
-    getActiveDraft,
-    getDraftById,
-    createDraft,
-    setActiveDraft,
-    addConversationEntry,
-    updateDraftFields,
-    buildAgentContext,
-  } = useVoiceDraftStore();
+  const store = useVoiceDraftStore();
 
-  // Keep ref in sync
-  useEffect(() => {
-    transcriptRef.current = transcript;
-  }, [transcript]);
+  useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
 
-  // Load previous conversation when opening with a draft
+  // Load previous conversation when resuming
   useEffect(() => {
     if (isOpen && draftId) {
-      const draft = getDraftById(draftId);
+      const draft = store.getDraftById(draftId);
       if (draft && draft.conversationHistory.length > 0) {
         setTranscript(draft.conversationHistory);
       }
       currentDraftIdRef.current = draftId;
-      setActiveDraft(draftId);
+      store.setActiveDraft(draftId);
     }
-  }, [isOpen, draftId, getDraftById, setActiveDraft]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, draftId]);
 
-  const extractAndSaveFields = useCallback((dId: string, entries: VoiceConversationEntry[]) => {
+  // Extract structured data from conversation text
+  const extractFields = useCallback((dId: string, entries: VoiceConversationEntry[]) => {
     const allText = entries.map(t => t.message).join(' ');
     const allLower = allText.toLowerCase();
+    const updates: Partial<VoiceDraft> = {};
 
-    // Extract customer name
-    let customerName: string | null = null;
-    const nameMatch = allText.match(/(?:for|customer(?:\s+is)?|name(?:\s+is)?|this is for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/);
-    if (nameMatch) customerName = nameMatch[1].trim();
+    // Customer name
+    const nameMatch = allText.match(/(?:for|customer(?:\s+is)?|name(?:\s+is)?|this is for|estimate for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})/);
+    if (nameMatch) updates.customerName = nameMatch[1].trim();
 
-    // Extract address
-    let propertyAddress: string | null = null;
-    const addrMatch = allText.match(/(\d+\s+[\w\s]+(?:Street|St|Avenue|Ave|Drive|Dr|Road|Rd|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl)[\w\s,]*)/i);
-    if (addrMatch) propertyAddress = addrMatch[1].trim();
+    // Address
+    const addrMatch = allText.match(/(\d+\s+[\w\s]+(?:Street|St|Avenue|Ave|Drive|Dr|Road|Rd|Lane|Ln|Boulevard|Blvd|Court|Ct|Way|Place|Pl)[\w\s,]*(?:,\s*\w[\w\s]*)?)/i);
+    if (addrMatch) updates.propertyAddress = addrMatch[1].trim();
 
-    // Extract project type
-    let projectType: 'interior' | 'exterior' | 'both' | null = null;
-    if (allLower.includes('interior') && allLower.includes('exterior')) projectType = 'both';
-    else if (allLower.includes('exterior')) projectType = 'exterior';
-    else if (allLower.includes('interior')) projectType = 'interior';
+    // Project type
+    if (allLower.includes('interior') && allLower.includes('exterior')) updates.projectType = 'both';
+    else if (allLower.includes('exterior')) updates.projectType = 'exterior';
+    else if (allLower.includes('interior')) updates.projectType = 'interior';
 
-    // Extract rooms
-    let numberOfRooms: number | null = null;
-    const roomMatch = allLower.match(/(\d+)\s*(?:rooms?|bedrooms?|areas?)/);
-    if (roomMatch) numberOfRooms = parseInt(roomMatch[1], 10);
+    // Areas/rooms
+    const roomNames = ['living room', 'kitchen', 'hallway', 'master bedroom', 'bedroom', 'bathroom',
+      'dining room', 'family room', 'basement', 'garage', 'foyer', 'laundry', 'office',
+      'exterior body', 'trim', 'front door', 'back door', 'ceiling', 'accent wall'];
+    const areas: string[] = [];
+    for (const room of roomNames) {
+      if (allLower.includes(room) && !areas.includes(room)) areas.push(room);
+    }
+    if (areas.length > 0) updates.areas = areas;
 
-    // Extract painters
-    let numberOfPainters: number | null = null;
+    // Number of rooms
+    const roomCountMatch = allLower.match(/(\d+)\s*(?:rooms?|bedrooms?|areas?)/);
+    if (roomCountMatch && areas.length === 0) {
+      updates.areas = [`${roomCountMatch[1]} rooms`];
+    }
+
+    // Painters
     const painterMatch = allLower.match(/(\d+)\s*(?:guys?|painters?|men|crew|people)/);
-    if (painterMatch) numberOfPainters = parseInt(painterMatch[1], 10);
+    if (painterMatch) updates.numberOfPainters = parseInt(painterMatch[1], 10);
 
-    // Extract days
-    let estimatedDays: number | null = null;
+    // Days
     const daysMatch = allLower.match(/(\d+(?:\.\d+)?)\s*days?/);
-    if (daysMatch) estimatedDays = parseFloat(daysMatch[1]);
+    if (daysMatch) updates.estimatedDays = parseFloat(daysMatch[1]);
 
-    // Extract rate
-    let hourlyRate: number | null = null;
+    // Hours per day
+    const hrsMatch = allLower.match(/(\d+)\s*hours?\s*(?:per|a)\s*day/);
+    if (hrsMatch) updates.hoursPerDay = parseInt(hrsMatch[1], 10);
+
+    // Rate
     const rateMatch = allLower.match(/(?:\$)?(\d+)\s*(?:an hour|per hour|\/hr|hourly|\/hour)/);
-    if (rateMatch) hourlyRate = parseInt(rateMatch[1], 10);
+    if (rateMatch) updates.hourlyRate = parseInt(rateMatch[1], 10);
 
-    // Extract square footage
-    let squareFootage: number | null = null;
+    // Square footage
     const sqftMatch = allLower.match(/(\d[\d,]*)\s*(?:square\s*(?:feet|foot|ft)|sq\s*(?:ft|feet)|sqft)/);
-    if (sqftMatch) squareFootage = parseInt(sqftMatch[1].replace(/,/g, ''), 10);
+    if (sqftMatch) {
+      // Store as an area note
+      const sqft = parseInt(sqftMatch[1].replace(/,/g, ''), 10);
+      if (!updates.areas) updates.areas = [];
+      const sqftNote = `~${sqft.toLocaleString()} sq ft`;
+      if (!updates.areas.includes(sqftNote)) updates.areas.push(sqftNote);
+    }
 
-    // Extract colors (SW colors + common colors)
-    const swColors = [
-      'agreeable gray', 'accessible beige', 'alabaster', 'repose gray', 'sea salt',
-      'naval', 'pure white', 'extra white', 'snowbound', 'dover white', 'city loft',
-      'passive', 'colonnade gray', 'mindful gray', 'worldly gray', 'iron ore',
-      'tricorn black', 'high reflective white', 'shoji white', 'eider white',
-      'modern gray', 'balanced beige', 'mega greige', 'analytical gray',
-      'duration', 'emerald', 'superpaint', 'proclassic', 'pro classic',
-    ];
-    const colors: string[] = [];
-    for (const color of swColors) {
-      if (allLower.includes(color) && !colors.includes(color)) {
-        colors.push(color);
+    // Paint products & gallons
+    const productPrices: Record<string, number> = {
+      'duration': 75, 'duration home': 65, 'superpaint': 55, 'super paint': 55,
+      'emerald': 85, 'proclassic': 70, 'pro classic': 70, 'problock': 45,
+      'primer': 45, 'pro block': 45,
+    };
+    
+    const gallonRegex = /(\d+)\s*gallons?\s*(?:of\s+)?(?:(duration home|duration|superpaint|super paint|emerald|proclassic|pro classic|problock|pro block|primer))?(?:\s+(?:for\s+)?(?:the\s+)?(exterior|interior|body|trim|doors?|ceiling|walls?|accent))?/gi;
+    const paintItems = [...(store.getDraftById(dId)?.paintItems || [])];
+    let gallonMatch;
+    while ((gallonMatch = gallonRegex.exec(allLower)) !== null) {
+      const gallons = parseInt(gallonMatch[1], 10);
+      const product = gallonMatch[2] || 'paint';
+      const area = gallonMatch[3] || 'general';
+      // Avoid duplicates
+      const exists = paintItems.some(p => p.gallons === gallons && p.product === product && p.area === area);
+      if (!exists) {
+        paintItems.push({
+          area,
+          product,
+          gallons,
+          finish: product.includes('classic') ? 'semi-gloss' : 'flat',
+          color: '',
+          coats: 2,
+          pricePerGallon: productPrices[product] || 55,
+        });
       }
     }
-    // Also look for SW codes like "SW 6244" or "SW6244"
+    if (paintItems.length > 0) updates.paintItems = paintItems;
+
+    // Colors
+    const swColors: Record<string, string> = {
+      'naval': 'SW 6244', 'alabaster': 'SW 7008', 'sea salt': 'SW 6204',
+      'agreeable gray': 'SW 7029', 'repose gray': 'SW 7015', 'pure white': 'SW 7005',
+      'extra white': 'SW 7006', 'iron ore': 'SW 7069', 'tricorn black': 'SW 6258',
+      'city loft': 'SW 7631', 'dover white': 'SW 6385', 'snowbound': 'SW 7004',
+      'mindful gray': 'SW 7016', 'passive': 'SW 7064', 'accessible beige': 'SW 7036',
+      'colonnade gray': 'SW 7641', 'worldly gray': 'SW 7043',
+    };
+    
+    const colorAssignments = [...(store.getDraftById(dId)?.colorAssignments || [])];
+    for (const [name, code] of Object.entries(swColors)) {
+      if (allLower.includes(name)) {
+        const exists = colorAssignments.some(c => c.color.toLowerCase() === name);
+        if (!exists) {
+          colorAssignments.push({ area: 'general', color: name, swCode: code });
+        }
+      }
+    }
+    // SW codes like SW 6244
     const swCodeMatches = allText.matchAll(/SW\s*(\d{4})/gi);
     for (const m of swCodeMatches) {
       const code = `SW ${m[1]}`;
-      if (!colors.includes(code)) colors.push(code);
+      const exists = colorAssignments.some(c => c.swCode === code);
+      if (!exists) {
+        colorAssignments.push({ area: 'general', color: code, swCode: code });
+      }
     }
+    if (colorAssignments.length > 0) updates.colorAssignments = colorAssignments;
 
-    // Extract gallons
-    const gallonsOfPaint: { area: string; gallons: number; product: string }[] = [];
-    const gallonMatches = allLower.matchAll(/(\d+)\s*gallons?\s*(?:of\s+)?(?:(duration|superpaint|emerald|proclassic|pro classic|primer|problock))?(?:\s+(?:for\s+)?(?:the\s+)?(exterior|interior|trim|body|doors?|ceiling|walls?))?/gi);
-    for (const m of gallonMatches) {
-      gallonsOfPaint.push({
-        gallons: parseInt(m[1], 10),
-        product: m[2] || 'paint',
-        area: m[3] || 'general',
-      });
+    // Scope of work
+    const prepItems = ['patch', 'sand', 'caulk', 'prime', 'pressure wash', 'scrape',
+      'protect flooring', 'protect furniture', 'drop cloth', 'tape off', 'mask',
+      'wallpaper removal', 'drywall repair', 'skim coat'];
+    const scope: string[] = [];
+    for (const item of prepItems) {
+      if (allLower.includes(item)) scope.push(item);
     }
-
-    const updates: Record<string, unknown> = {};
-    if (customerName) updates.customerName = customerName;
-    if (propertyAddress) updates.propertyAddress = propertyAddress;
-    if (projectType) updates.projectType = projectType;
-    if (numberOfRooms != null) updates.numberOfRooms = numberOfRooms;
-    if (colors.length > 0) updates.colors = colors;
-    if (squareFootage != null) updates.squareFootage = squareFootage;
-    if (numberOfPainters != null) updates.numberOfPainters = numberOfPainters;
-    if (estimatedDays != null) updates.estimatedDays = estimatedDays;
-    if (hourlyRate != null) updates.hourlyRate = hourlyRate;
-    if (gallonsOfPaint.length > 0) updates.gallonsOfPaint = gallonsOfPaint;
+    if (scope.length > 0) updates.scopeOfWork = scope;
 
     if (Object.keys(updates).length > 0) {
-      updateDraftFields(dId, updates);
+      store.updateDraftFields(dId, updates);
     }
-  }, [updateDraftFields]);
-
-  const buildEstimateData = useCallback((): VoiceEstimateData | null => {
-    const id = currentDraftIdRef.current;
-    if (!id) return null;
-    
-    // Run extraction one final time
-    extractAndSaveFields(id, transcriptRef.current);
-    
-    const draft = getDraftById(id);
-    if (!draft) return null;
-
-    const fullTranscript = transcriptRef.current
-      .map(t => `${t.role === 'user' ? 'You' : 'Agent'}: ${t.message}`)
-      .join('\n');
-
-    return {
-      customerName: draft.customerName || '',
-      propertyAddress: draft.propertyAddress || '',
-      projectType: draft.projectType || '',
-      numberOfRooms: draft.numberOfRooms || 0,
-      paintColors: draft.colors,
-      squareFootage: draft.squareFootage || 0,
-      numberOfPainters: draft.numberOfPainters || 0,
-      estimatedDays: draft.estimatedDays || 0,
-      hourlyRate: draft.hourlyRate || 0,
-      laborCost: draft.laborCost || 0,
-      gallonsOfPaint: draft.gallonsOfPaint,
-      notes: draft.specialNotes || '',
-      rawTranscript: fullTranscript,
-      draftId: id,
-    };
-  }, [getDraftById, extractAndSaveFields]);
+  }, [store]);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -203,22 +190,18 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     },
     onDisconnect: () => {
       console.log('[Voice] Disconnected');
-      // Extract fields when conversation ends
       const id = currentDraftIdRef.current;
-      if (id) {
-        extractAndSaveFields(id, transcriptRef.current);
-      }
+      if (id) extractFields(id, transcriptRef.current);
     },
     onMessage: (props: { message: string; source: string }) => {
       const role = props.source === 'user' ? 'user' as const : 'agent' as const;
       const entry: VoiceConversationEntry = { role, message: props.message, timestamp: Date.now() };
-      
       setTranscript(prev => [...prev, entry]);
-      
-      // Save to draft store
       const id = currentDraftIdRef.current;
       if (id) {
-        addConversationEntry(id, entry);
+        store.addConversationEntry(id, entry);
+        // Extract after each message for live updates
+        extractFields(id, [...transcriptRef.current, entry]);
       }
     },
     onError: (message: string) => {
@@ -227,7 +210,6 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     },
   });
 
-  // Auto-scroll transcript
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcript]);
@@ -243,99 +225,83 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     hasExtractedRef.current = false;
     setErrorMsg(null);
 
-    // Create or resume a draft
     let activeId = currentDraftIdRef.current;
     if (!activeId) {
-      // Check for existing incomplete draft
-      const activeDraft = getActiveDraft();
+      const activeDraft = store.getActiveDraft();
       if (activeDraft && !activeDraft.isComplete) {
         activeId = activeDraft.id;
       } else {
-        const newDraft = createDraft();
-        activeId = newDraft.id;
+        activeId = store.createDraft().id;
       }
       currentDraftIdRef.current = activeId;
     }
 
-    // Build dynamic overrides with collected context
-    const context = buildAgentContext(activeId);
-    const isResume = (getDraftById(activeId)?.conversationHistory.length || 0) > 0;
+    const context = store.buildAgentContext(activeId);
+    const isResume = (store.getDraftById(activeId)?.conversationHistory.length || 0) > 0;
 
     try {
-      console.log('[Voice] Starting session, draft:', activeId, 'resume:', isResume);
-      
-      // Build overrides for the agent
-      const overrides: Record<string, unknown> = {};
-      
-      if (isResume && context) {
-        // Override the agent prompt to include context about what's been collected
-        overrides.agent = {
-          prompt: {
-            prompt: `You are resuming an estimate conversation. Here is the current state:\n\n${context}\n\nIMPORTANT: Welcome the user back and continue collecting the missing information. Do NOT re-ask questions that have already been answered.`,
-          },
-          first_message: `Welcome back! Let me check where we left off...`,
-        };
-      }
-
       const sessionConfig: Record<string, unknown> = {
         agentId,
         connectionType: 'websocket',
       };
-      
-      if (Object.keys(overrides).length > 0) {
-        sessionConfig.overrides = overrides;
+
+      if (isResume && context) {
+        sessionConfig.overrides = {
+          agent: {
+            prompt: {
+              prompt: `You are resuming an estimate conversation. Here is the current state:\n\n${context}`,
+            },
+            first_message: `Welcome back! Let me check where we left off on this estimate...`,
+          },
+        };
       }
 
-      const id = await conversation.startSession(sessionConfig as Parameters<typeof conversation.startSession>[0]);
-      console.log('[Voice] Session started:', id);
+      await conversation.startSession(sessionConfig as Parameters<typeof conversation.startSession>[0]);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
-      console.error('[Voice] Failed to start:', msg);
       setErrorMsg(`Failed to connect: ${msg}`);
     }
-  }, [agentId, conversation, createDraft, getActiveDraft, getDraftById, buildAgentContext]);
+  }, [agentId, conversation, store]);
 
   const stopConversation = useCallback(async () => {
-    try {
-      await conversation.endSession();
-    } catch (error) {
-      console.error('[Voice] Failed to end:', error);
-    }
+    try { await conversation.endSession(); } catch (e) { console.error('[Voice] End error:', e); }
   }, [conversation]);
 
   const handleClose = useCallback(async () => {
-    if (conversation.status === 'connected') {
-      await stopConversation();
-    }
+    if (conversation.status === 'connected') await stopConversation();
     onClose();
   }, [conversation.status, stopConversation, onClose]);
 
   const handleFinish = useCallback(async () => {
-    if (conversation.status === 'connected') {
-      await stopConversation();
-    }
-    
+    if (conversation.status === 'connected') await stopConversation();
     if (!hasExtractedRef.current) {
       hasExtractedRef.current = true;
-      const data = buildEstimateData();
-      if (data) {
-        onEstimateReady(data);
+      const id = currentDraftIdRef.current;
+      if (id) {
+        extractFields(id, transcriptRef.current);
+        const draft = store.getDraftById(id);
+        if (draft) {
+          const fullTranscript = transcriptRef.current
+            .map(t => `${t.role === 'user' ? 'You' : 'Agent'}: ${t.message}`)
+            .join('\n');
+          onEstimateReady({ draft, rawTranscript: fullTranscript });
+        }
       }
     }
-  }, [conversation.status, stopConversation, buildEstimateData, onEstimateReady]);
+  }, [conversation.status, stopConversation, extractFields, store, onEstimateReady]);
 
   if (!isOpen) return null;
 
   const isConnected = conversation.status === 'connected';
   const isConnecting = conversation.status === 'connecting';
   const isSpeaking = conversation.isSpeaking;
-  const currentDraft = currentDraftIdRef.current ? getDraftById(currentDraftIdRef.current) : null;
-  const isResuming = currentDraft && currentDraft.conversationHistory.length > 0 && transcript.length === 0;
+  const currentDraft = currentDraftIdRef.current ? store.getDraftById(currentDraftIdRef.current) : null;
+  const completionPct = currentDraftIdRef.current ? store.getCompletionPercent(currentDraftIdRef.current) : 0;
+  const missingFields = currentDraftIdRef.current ? store.getMissingFields(currentDraftIdRef.current) : [];
 
   return (
     <div className="fixed inset-0 z-[200] flex flex-col">
       <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-2xl" onClick={handleClose} />
-
       <div className="relative z-10 flex flex-col h-full animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 safe-top">
@@ -348,8 +314,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
               <p className="text-xs text-slate-400">
                 {isConnected
                   ? isSpeaking ? 'Speaking...' : 'Listening...'
-                  : isConnecting ? 'Connecting...'
-                  : isResuming ? 'Resuming conversation...' : 'Ready'}
+                  : isConnecting ? 'Connecting...' : 'Ready'}
               </p>
             </div>
           </div>
@@ -358,40 +323,35 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
           </button>
         </div>
 
-        {/* Error Banner */}
         {errorMsg && (
           <div className="mx-5 mb-2 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl">
             <p className="text-red-400 text-sm">{errorMsg}</p>
           </div>
         )}
 
-        {/* Draft Status Badge */}
-        {currentDraft && (
-          <div className="flex justify-center py-1">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/40 border border-slate-700/20">
-              <div className={`w-1.5 h-1.5 rounded-full ${currentDraft.isComplete ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-              <span className="text-[10px] text-slate-500 font-medium">
-                Draft {currentDraft.id.slice(-6)} • {currentDraft.conversationHistory.length} messages
-              </span>
+        {/* Progress Bar */}
+        {currentDraft && transcript.length > 0 && (
+          <div className="mx-5 mb-2">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] text-slate-500 font-medium">Estimate completion</span>
+              <span className="text-[10px] text-slate-400 font-semibold">{completionPct}%</span>
             </div>
+            <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-500"
+                style={{ width: `${completionPct}%` }}
+              />
+            </div>
+            {missingFields.length > 0 && missingFields.length <= 3 && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <AlertCircle size={10} className="text-amber-400 flex-shrink-0" />
+                <span className="text-[10px] text-amber-400/80 truncate">
+                  Still need: {missingFields.slice(0, 3).join(', ')}
+                </span>
+              </div>
+            )}
           </div>
         )}
-
-        {/* Status */}
-        <div className="flex justify-center py-2">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-800/60 border border-slate-700/30">
-            <div className={`w-2 h-2 rounded-full transition-colors duration-300 ${
-              isConnected
-                ? isSpeaking ? 'bg-blue-400 animate-pulse' : 'bg-emerald-400 animate-pulse'
-                : isConnecting ? 'bg-amber-400 animate-pulse' : 'bg-slate-500'
-            }`} />
-            <span className="text-xs text-slate-400 font-medium">
-              {isConnected
-                ? isSpeaking ? 'Agent speaking' : 'Listening to you'
-                : isConnecting ? 'Connecting to agent...' : 'Tap mic to start'}
-            </span>
-          </div>
-        </div>
 
         {/* Transcript */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
@@ -401,12 +361,10 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
                 <Mic size={36} className="text-blue-400" />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">
-                {isResuming ? 'Continue Estimate' : 'Voice Estimate'}
+                {currentDraft?.conversationHistory.length ? 'Continue Estimate' : 'Voice Estimate'}
               </h3>
               <p className="text-slate-400 text-sm max-w-[280px] leading-relaxed">
-                {isResuming
-                  ? "Tap the microphone to pick up where you left off. The agent remembers what you've already discussed."
-                  : "Tap the microphone to start talking with the estimating assistant. They'll help you build a painting estimate."}
+                Tap the microphone to start. The assistant will walk you through every field needed for a complete estimate.
               </p>
             </div>
           ) : (
@@ -442,6 +400,37 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
         {/* Controls */}
         <div className="px-5 py-6 safe-bottom">
           <div className="flex flex-col items-center gap-4">
+            {/* Collected data summary chips */}
+            {currentDraft && (
+              <div className="flex flex-wrap justify-center gap-1.5 max-w-full">
+                {currentDraft.customerName && (
+                  <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                    <CheckCircle2 size={8} /> {currentDraft.customerName}
+                  </span>
+                )}
+                {currentDraft.projectType && (
+                  <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center gap-1">
+                    <CheckCircle2 size={8} /> {currentDraft.projectType}
+                  </span>
+                )}
+                {currentDraft.laborCost != null && (
+                  <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-green-500/10 text-green-400 border border-green-500/20 flex items-center gap-1">
+                    <CheckCircle2 size={8} /> ${currentDraft.laborCost.toLocaleString()} labor
+                  </span>
+                )}
+                {currentDraft.paintItems.length > 0 && (
+                  <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center gap-1">
+                    <CheckCircle2 size={8} /> {currentDraft.paintItems.reduce((s, p) => s + p.gallons, 0)} gal paint
+                  </span>
+                )}
+                {currentDraft.colorAssignments.length > 0 && (
+                  <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                    <CheckCircle2 size={8} /> {currentDraft.colorAssignments.length} colors
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="relative">
               {isConnected && !isSpeaking && (
                 <>
@@ -472,7 +461,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
 
             {transcript.length > 0 && !isConnected && !isConnecting && (
               <button onClick={handleFinish} className="mt-2 px-8 py-3 bg-white text-slate-950 font-semibold rounded-xl shadow-lg shadow-white/10 transition-all hover:bg-slate-100 active:scale-[0.96]">
-                Create Estimate from Conversation
+                {completionPct >= 80 ? 'Finalize Estimate' : 'Review What We Have'}
               </button>
             )}
           </div>
