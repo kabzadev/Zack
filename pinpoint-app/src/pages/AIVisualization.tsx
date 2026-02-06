@@ -18,7 +18,7 @@ import {
 import { API_URL } from '../utils/api';
 const GEMINI_PROXY_URL = API_URL ? `${API_URL.replace('/api', '')}/api/gemini/generate` : '';
 const GEMINI_API_KEY = 'AIzaSyD4F5xs2nayiYdKJ1q3jqUdGt53Lla3AkA';
-const GEMINI_MODEL = 'gemini-2.5-flash-image';
+const GEMINI_MODEL = 'nano-banana-pro-preview'; // Gemini 3 Pro — much better at selective image editing
 const GEMINI_DIRECT_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 interface ColorZoneInfo {

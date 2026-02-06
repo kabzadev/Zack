@@ -3,7 +3,7 @@ import { Router, Request, Response } from 'express';
 const router = Router();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyD4F5xs2nayiYdKJ1q3jqUdGt53Lla3AkA';
-const GEMINI_MODEL = 'gemini-2.5-flash-image';
+const GEMINI_MODEL = 'nano-banana-pro-preview'; // Gemini 3 Pro — better image editing
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
 // POST /api/gemini/generate — proxy to Gemini image generation
