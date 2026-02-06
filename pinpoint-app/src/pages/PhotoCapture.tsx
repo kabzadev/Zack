@@ -97,31 +97,88 @@ export const PhotoCapture = () => {
     sessionStorage.setItem('pc-activeZone', activeZone);
   }, [activeZone]);
 
-  const handleImageCapture = useCallback((dataUrl: string) => {
-    setCapturedImage(dataUrl);
+  // Compress image to fit sessionStorage (~5MB limit) and Gemini API
+  const compressImage = useCallback((dataUrl: string, maxDim = 1200, quality = 0.8): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        telemetry.color('image:compressed', {
+          originalSize: dataUrl.length,
+          compressedSize: compressed.length,
+          dimensions: `${w}x${h}`,
+          scale: Math.round(scale * 100) + '%',
+        });
+        resolve(compressed);
+      };
+      img.onerror = () => resolve(dataUrl); // fallback to original
+      img.src = dataUrl;
+    });
   }, []);
+
+  const handleImageCapture = useCallback(async (dataUrl: string) => {
+    const compressed = await compressImage(dataUrl);
+    setCapturedImage(compressed);
+  }, [compressImage]);
 
   const setZoneColor = (zoneId: string, color: SWColor) => {
     setZones(prev => prev.map(z => z.id === zoneId ? { ...z, color } : z));
   };
 
-  const handleVisualize = () => {
+  const handleVisualize = async () => {
     if (!capturedImage) return;
     const assignedZones = zones.filter(z => z.color !== null);
     if (assignedZones.length === 0) return;
-    telemetry.color('visualize', { zones: assignedZones.map(z => ({ id: z.id, color: z.color?.name })) });
+    telemetry.color('visualize', { zones: assignedZones.map(z => ({ id: z.id, color: z.color?.name })), imageSize: capturedImage.length });
 
-    sessionStorage.setItem('visualizer-image', capturedImage);
-    sessionStorage.setItem('visualizer-zones', JSON.stringify(
-      assignedZones.map(z => ({
-        id: z.id,
-        label: z.label,
-        colorName: z.color!.name,
-        colorCode: z.color!.code,
-        colorHex: z.color!.hex,
-      }))
-    ));
-    navigate('/ai-visualization');
+    try {
+      // Ensure image is small enough for sessionStorage (~5MB limit)
+      let imageToStore = capturedImage;
+      if (capturedImage.length > 3_500_000) {
+        telemetry.color('visualize:recompress', { size: capturedImage.length });
+        imageToStore = await compressImage(capturedImage, 800, 0.7);
+      }
+
+      sessionStorage.setItem('visualizer-image', imageToStore);
+      sessionStorage.setItem('visualizer-zones', JSON.stringify(
+        assignedZones.map(z => ({
+          id: z.id,
+          label: z.label,
+          colorName: z.color!.name,
+          colorCode: z.color!.code,
+          colorHex: z.color!.hex,
+        }))
+      ));
+      navigate('/ai-visualization');
+    } catch (e) {
+      telemetry.error('visualize:storage_error', { error: String(e), imageSize: capturedImage.length });
+      // Try with more aggressive compression
+      try {
+        const smaller = await compressImage(capturedImage, 600, 0.6);
+        sessionStorage.setItem('visualizer-image', smaller);
+        sessionStorage.setItem('visualizer-zones', JSON.stringify(
+          assignedZones.map(z => ({
+            id: z.id,
+            label: z.label,
+            colorName: z.color!.name,
+            colorCode: z.color!.code,
+            colorHex: z.color!.hex,
+          }))
+        ));
+        navigate('/ai-visualization');
+      } catch (e2) {
+        telemetry.error('visualize:storage_fatal', { error: String(e2) });
+        alert('Image is too large. Please try a smaller photo.');
+      }
+    }
   };
 
   // Popular colors for quick picks
