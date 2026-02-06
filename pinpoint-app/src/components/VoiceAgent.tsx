@@ -459,6 +459,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     if (colorAssignments.length > (currentDraftData?.colorAssignments?.length || 0)) updates.colorAssignments = colorAssignments;
 
     // === Scope of work ===
+    // Merge with existing scope
     const prepItems = [
       'patch', 'patching', 'sand', 'sanding', 'caulk', 'caulking',
       'prime', 'priming', 'primer', 'pressure wash', 'power wash',
@@ -470,7 +471,8 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       'wood repair', 'carpentry', 'replace trim', 'replace boards',
       'clean', 'cleaning', 'prep', 'preparation',
     ];
-    const scope: string[] = [];
+    const existingScope = currentDraftData?.scopeOfWork || [];
+    const scope: string[] = [...existingScope];
     for (const item of prepItems) {
       if (allLower.includes(item) && !scope.includes(item)) scope.push(item);
     }
@@ -487,11 +489,12 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       if (item === 'prep' && arr.includes('preparation')) return false;
       return true;
     });
-    if (dedupedScope.length > 0) updates.scopeOfWork = dedupedScope;
+    if (dedupedScope.length > existingScope.length) updates.scopeOfWork = dedupedScope;
 
     // === Add-ons ===
-    // Look for hourly add-on work
-    const addOns: { description: string; hours: number; rate: number }[] = [];
+    // Look for hourly add-on work, merge with existing
+    const existingAddOns = currentDraftData?.addOns || [];
+    const addOns: { description: string; hours: number; rate: number }[] = [...existingAddOns];
     const addOnPatterns = [
       /(?:pressure|power)\s*wash(?:ing)?\s*(?:(\d+)\s*hours?)?/i,
       /carpentry\s*(?:(\d+)\s*hours?)?/i,
@@ -503,16 +506,16 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
         const desc = m[0].replace(/\d+\s*hours?/, '').trim();
         const hours = m[1] ? parseInt(m[1], 10) : 0;
         if (!addOns.some(a => a.description === desc)) {
-          addOns.push({ description: desc, hours, rate: updates.hourlyRate || 65 });
+          addOns.push({ description: desc, hours, rate: updates.hourlyRate || currentDraftData?.hourlyRate || 65 });
         }
       }
     }
-    if (addOns.length > 0) updates.addOns = addOns;
+    if (addOns.length > existingAddOns.length) updates.addOns = addOns;
 
     if (Object.keys(updates).length > 0) {
-      store.updateDraftFields(dId, updates);
+      storeRef.current.updateDraftFields(dId, updates);
     }
-  }, [store]);
+  }, []);
 
   // Get business config for the agent
   const getBusinessConfig = useCallback(async () => {

@@ -76,9 +76,18 @@ export const useAuthStore = create<AuthState>()(
 
       verifyOTP: async (phoneNumber: string, code: string) => {
         try {
+          // Retrieve name from signup flow
+          let signupName: { firstName?: string; lastName?: string } = {};
+          try {
+            const stored = sessionStorage.getItem('signup_name');
+            if (stored) signupName = JSON.parse(stored);
+          } catch {}
+          
           const response = await axios.post(`${API_URL}/auth/verify-otp`, {
             phoneNumber,
             code,
+            firstName: signupName.firstName,
+            lastName: signupName.lastName,
             deviceName: navigator.userAgent,
             deviceType: /Mobile|Android|iPhone/.test(navigator.userAgent) ? 'mobile' : 'desktop'
           });
@@ -107,6 +116,7 @@ export const useAuthStore = create<AuthState>()(
             });
             
             localStorage.setItem('refreshToken', data.tokens.refreshToken);
+            sessionStorage.removeItem('signup_name');
           }
           
           return { success: true, status: 'approved' };

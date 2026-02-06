@@ -6,6 +6,8 @@ export const PhoneLogin = () => {
   const navigate = useNavigate();
   const { requestOTP, setTempPhoneNumber } = useAuthStore();
   
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -28,6 +30,11 @@ export const PhoneLogin = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('Please enter your first and last name');
+      return;
+    }
+    
     const cleaned = phoneNumber.replace(/\D/g, '');
     if (cleaned.length !== 10) {
       setError('Please enter a valid 10-digit phone number');
@@ -41,6 +48,8 @@ export const PhoneLogin = () => {
     
     if (result.success) {
       setTempPhoneNumber(phoneNumber);
+      // Store name temporarily for after OTP verification
+      sessionStorage.setItem('signup_name', JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim() }));
       navigate('/verify');
     } else {
       setError(result.error || 'Failed to send code. Please try again.');
@@ -73,6 +82,37 @@ export const PhoneLogin = () => {
 
       <div className="px-6 pb-8">
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Name Fields */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-semibold text-white mb-2">
+                First Name
+              </label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={e => { setFirstName(e.target.value); setError(''); }}
+                placeholder="John"
+                className="w-full px-4 py-4 bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-xl text-white text-base placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                disabled={isLoading}
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-white mb-2">
+                Last Name
+              </label>
+              <input
+                type="text"
+                value={lastName}
+                onChange={e => { setLastName(e.target.value); setError(''); }}
+                placeholder="Smith"
+                className="w-full px-4 py-4 bg-slate-800/60 backdrop-blur-sm border border-slate-700/50 rounded-xl text-white text-base placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-semibold text-white mb-3">
               Phone Number
@@ -110,7 +150,7 @@ export const PhoneLogin = () => {
           ) : (
             <button
               type="submit"
-              disabled={phoneNumber.replace(/\D/g, '').length !== 10}
+              disabled={phoneNumber.replace(/\D/g, '').length !== 10 || !firstName.trim() || !lastName.trim()}
               className="w-full bg-white text-slate-900 font-bold py-5 rounded-xl text-lg hover:bg-slate-100 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:scale-100 shadow-lg"
             >
               Continue

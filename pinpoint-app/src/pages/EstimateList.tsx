@@ -171,7 +171,7 @@ export const EstimateList = () => {
               <Card
                 key={estimate.id}
                 clickable
-                onClick={() => navigate(`/estimates/new?customer=${estimate.customerId}`)}
+                onClick={() => navigate(`/estimates/${estimate.id}`)}
                 animationDelay={i * 40}
                 className="p-4"
               >

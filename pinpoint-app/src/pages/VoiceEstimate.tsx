@@ -4,6 +4,7 @@ import { Layout, Card, Button } from '../components';
 import { VoiceAgent, type VoiceEstimateData } from '../components/VoiceAgent';
 import { useVoiceDraftStore } from '../stores/voiceDraftStore';
 import { useEstimateStore } from '../stores/estimateStore';
+import { useCustomerStore } from '../stores/customerStore';
 import { telemetry } from '../utils/telemetry';
 import {
   Mic,
@@ -77,12 +78,49 @@ export const VoiceEstimate = () => {
     if (!estimateData) setPageState('idle');
   }, [estimateData]);
 
+  const customerStore = useCustomerStore();
+  
   const handleCreateEstimate = useCallback(() => {
     if (!estimateData) return;
     const d = estimateData.draft;
 
-    // Create a real Estimate in the estimate store
-    const customerId = `voice-${d.id}`;
+    // Try to find a matching customer by name
+    let customerId = '';
+    if (d.customerName) {
+      const results = customerStore.searchCustomers({ search: d.customerName });
+      if (results.length > 0) {
+        customerId = results[0].id;
+      }
+    }
+    
+    // If no customer match found, create a new one
+    if (!customerId && d.customerName) {
+      const nameParts = d.customerName.trim().split(/\s+/);
+      const firstName = nameParts[0] || 'Unknown';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      // Parse address parts
+      const addrParts = (d.propertyAddress || '').split(',').map(s => s.trim());
+      
+      const newCustomer = customerStore.addCustomer({
+        firstName,
+        lastName,
+        phone: d.customerPhone || '',
+        email: d.customerEmail || '',
+        address: addrParts[0] || '',
+        city: addrParts[1] || '',
+        state: addrParts[2] || '',
+        zipCode: addrParts[3] || '',
+        type: 'homeowner',
+        status: 'active',
+        tags: ['voice-estimate'],
+        notes: `Created from voice estimate on ${new Date().toLocaleDateString()}`,
+      });
+      customerId = newCustomer.id;
+    }
+    
+    if (!customerId) customerId = `voice-${d.id}`;
+    
     const estimate = estimateStore.createEstimate(
       customerId,
       d.customerName || 'Voice Estimate',

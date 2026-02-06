@@ -337,7 +337,7 @@ export const CustomerDetail = () => {
               {customerEstimates.map(est => (
                 <div
                   key={est.id}
-                  onClick={() => navigate(`/estimates/new?customer=${customer.id}`)}
+                  onClick={() => navigate(`/estimates/${est.id}`)}
                   className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl cursor-pointer hover:bg-slate-800 transition-colors border border-slate-700/30"
                 >
                   <div className="flex-1 min-w-0">
