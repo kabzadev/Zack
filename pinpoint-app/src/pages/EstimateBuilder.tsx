@@ -4,7 +4,8 @@ import { useEstimateStore, type MaterialItem, type LaborItem, materialPresets } 
 import { useCustomerStore } from '../stores/customerStore';
 import { Layout, Button, Modal, Input, Card } from '../components';
 import { EstimatePDF } from '../components/EstimatePDF';
-import { MapPin, Plus, X, FileText, Save, FileDown } from 'lucide-react';
+import { shareViaSMS, shareViaEmail, copyEstimateToClipboard } from '../utils/shareEstimate';
+import { MapPin, Plus, X, Save, FileDown, Send, MessageSquare, Mail, Copy, Check } from 'lucide-react';
 
 const categoryEmoji: Record<string, string> = {
   paint: '🎨',
@@ -39,6 +40,10 @@ export const EstimateBuilder = () => {
 
   // PDF modal state
   const [showPDFModal, setShowPDFModal] = useState(false);
+
+  // Share state
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Material form state
   const [showMaterialForm, setShowMaterialForm] = useState(false);
@@ -168,6 +173,26 @@ export const EstimateBuilder = () => {
 
   const laborTotal =
     (laborForm.painters || 0) * (laborForm.days || 0) * (laborForm.hoursPerDay || 0) * (laborForm.hourlyRate || 0);
+
+  // Share handlers
+  const handleShareSMS = async () => {
+    await shareViaSMS(estimate);
+    setShowShareMenu(false);
+  };
+
+  const handleShareEmail = () => {
+    shareViaEmail(estimate);
+    setShowShareMenu(false);
+  };
+
+  const handleCopyLink = async () => {
+    const success = await copyEstimateToClipboard(estimate);
+    if (success) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+    setShowShareMenu(false);
+  };
 
   return (
     <Layout activeTab="estimates" showBack>
@@ -415,17 +440,76 @@ export const EstimateBuilder = () => {
               >
                 PDF
               </Button>
-              <Button
-                variant="secondary"
-                size="md"
-                icon={<FileText size={18} />}
-                onClick={() => navigate('/estimates/preview')}
-              >
-                Preview
-              </Button>
               <Button size="md" icon={<Save size={18} />} onClick={() => navigate('/estimates')}>
                 Save
               </Button>
+            </div>
+          </div>
+
+          {/* Send to Customer Action Bar */}
+          <div className="mt-3 pt-3 border-t border-slate-700/50">
+            <div className="relative">
+              <Button
+                fullWidth
+                size="md"
+                icon={<Send size={18} />}
+                onClick={() => setShowShareMenu(!showShareMenu)}
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 !text-white border-0 shadow-lg shadow-blue-500/20"
+              >
+                Send to Customer
+              </Button>
+
+              {/* Share Options Popup */}
+              {showShareMenu && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-slate-800 border border-slate-700/50 rounded-xl overflow-hidden shadow-2xl shadow-black/40 animate-fade-in-up">
+                  <button
+                    onClick={handleShareSMS}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-slate-700/50 transition-colors active:scale-[0.98]"
+                  >
+                    <div className="w-9 h-9 bg-green-500/20 rounded-lg flex items-center justify-center">
+                      <MessageSquare size={18} className="text-green-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">Send via SMS</p>
+                      <p className="text-xs text-slate-400">Text estimate summary</p>
+                    </div>
+                  </button>
+
+                  <div className="border-t border-slate-700/30" />
+
+                  <button
+                    onClick={handleShareEmail}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-slate-700/50 transition-colors active:scale-[0.98]"
+                  >
+                    <div className="w-9 h-9 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                      <Mail size={18} className="text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">Send via Email</p>
+                      <p className="text-xs text-slate-400">Open email with estimate</p>
+                    </div>
+                  </button>
+
+                  <div className="border-t border-slate-700/30" />
+
+                  <button
+                    onClick={handleCopyLink}
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-slate-700/50 transition-colors active:scale-[0.98]"
+                  >
+                    <div className="w-9 h-9 bg-amber-500/20 rounded-lg flex items-center justify-center">
+                      {copied ? (
+                        <Check size={18} className="text-green-400" />
+                      ) : (
+                        <Copy size={18} className="text-amber-400" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">{copied ? 'Copied!' : 'Copy to Clipboard'}</p>
+                      <p className="text-xs text-slate-400">Copy estimate text</p>
+                    </div>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

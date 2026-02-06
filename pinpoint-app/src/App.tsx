@@ -11,6 +11,9 @@ import { ColorPickerPage } from './pages/ColorPickerPage';
 import { VoiceEstimate } from './pages/VoiceEstimate';
 import { PhotoCapture } from './pages/PhotoCapture';
 import { AIVisualization } from './pages/AIVisualization';
+import { AdminPanel } from './pages/AdminPanel';
+import { AdminUserManagement } from './pages/AdminUserManagement';
+import { Settings } from './pages/Settings';
 import { useAuthStore } from './stores/authStore';
 import { useEffect, useState } from 'react';
 import './App.css';
@@ -135,6 +138,18 @@ function AppContent() {
           <Route 
             path="/estimates/:id" 
             element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <EstimateBuilder /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/admin" 
+            element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <AdminPanel /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/admin/users" 
+            element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <AdminUserManagement /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/settings" 
+            element={effectiveAuthenticated && effectiveUser?.status === 'approved' ? <Settings /> : <Navigate to="/login" replace />} 
           />
           
           <Route path="*" element={<Navigate to={fallbackPath} replace />} />
