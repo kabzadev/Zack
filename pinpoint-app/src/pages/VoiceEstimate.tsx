@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Layout, Card, Button } from '../components';
 import { VoiceAgent, type VoiceEstimateData } from '../components/VoiceAgent';
 import { useVoiceDraftStore } from '../stores/voiceDraftStore';
+import { useEstimateStore } from '../stores/estimateStore';
 import {
   Mic,
   User,
@@ -35,6 +36,7 @@ export const VoiceEstimate = () => {
   const [resumeDraftId, setResumeDraftId] = useState<string | undefined>(undefined);
 
   const store = useVoiceDraftStore();
+  const estimateStore = useEstimateStore();
   const incompleteDrafts = store.getIncompleteDrafts();
 
   const handleStartNew = useCallback(() => {
@@ -65,17 +67,65 @@ export const VoiceEstimate = () => {
   const handleCreateEstimate = useCallback(() => {
     if (!estimateData) return;
     const d = estimateData.draft;
-    const params = new URLSearchParams();
-    if (d.customerName) params.set('voiceName', d.customerName);
-    if (d.propertyAddress) params.set('voiceAddress', d.propertyAddress);
-    if (d.areas.length > 0) params.set('voiceAreas', d.areas.join(','));
-    if (d.numberOfPainters) params.set('voicePainters', String(d.numberOfPainters));
-    if (d.estimatedDays) params.set('voiceDays', String(d.estimatedDays));
-    if (d.hourlyRate) params.set('voiceRate', String(d.hourlyRate));
-    if (d.laborCost) params.set('voiceLabor', String(d.laborCost));
-    params.set('draftId', d.id);
-    navigate(`/customers?from=voice&${params.toString()}`);
-  }, [estimateData, navigate]);
+
+    // Create a real Estimate in the estimate store
+    const customerId = `voice-${d.id}`;
+    const estimate = estimateStore.createEstimate(
+      customerId,
+      d.customerName || 'Voice Estimate',
+      d.propertyAddress || ''
+    );
+
+    // Build project name from areas
+    const projectName = d.projectType
+      ? `${d.projectType.charAt(0).toUpperCase() + d.projectType.slice(1)} Paint${d.areas.length > 0 ? ` — ${d.areas.slice(0, 3).join(', ')}` : ''}`
+      : d.areas.length > 0 ? d.areas.slice(0, 3).join(', ') : 'Voice Estimate';
+
+    // Convert voice draft paint items to material items
+    const materials = d.paintItems.map((p, i) => ({
+      id: `vm-${i}`,
+      name: `${p.product}${p.color ? ` (${p.color})` : ''}${p.finish ? ` — ${p.finish}` : ''}`,
+      quantity: p.gallons,
+      unit: 'gallon' as const,
+      unitPrice: p.pricePerGallon,
+      category: 'paint' as const,
+    }));
+
+    // Convert voice draft labor to labor items
+    const labor = d.numberOfPainters && d.estimatedDays ? [{
+      id: 'vl-1',
+      description: d.scopeOfWork.length > 0 ? d.scopeOfWork.join(', ') : `${d.projectType || 'Paint'} work`,
+      painters: d.numberOfPainters,
+      days: d.estimatedDays,
+      hoursPerDay: d.hoursPerDay || 8,
+      hourlyRate: d.hourlyRate || 65,
+    }] : [];
+
+    // Build scope of work including color assignments
+    const scopeOfWork = [
+      ...d.scopeOfWork,
+      ...d.colorAssignments.map(c => `${c.area}: ${c.color} (${c.swCode})`),
+    ];
+
+    // Update the estimate with all voice data
+    estimateStore.updateEstimate(estimate.id, {
+      projectName,
+      description: `Created via voice estimate${d.conversationHistory.length > 0 ? ` (${d.conversationHistory.length} messages)` : ''}`,
+      scopeOfWork,
+      materials,
+      labor,
+      materialMarkupPercent: d.materialMarkupPercent,
+      taxRate: d.taxRate,
+      status: 'draft',
+    });
+
+    // Link the voice draft to this estimate
+    store.markComplete(d.id);
+    store.linkToEstimate(d.id, estimate.id);
+
+    // Navigate to the estimates list so they can see it
+    navigate('/estimates');
+  }, [estimateData, estimateStore, store, navigate]);
 
   const handleStartOver = useCallback(() => {
     setEstimateData(null);

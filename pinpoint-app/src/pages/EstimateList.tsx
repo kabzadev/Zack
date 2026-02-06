@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEstimateStore } from '../stores/estimateStore';
+import { useVoiceDraftStore } from '../stores/voiceDraftStore';
 import { Layout, Card, Badge, EmptyState } from '../components';
-import { Plus } from 'lucide-react';
+import { Plus, Mic } from 'lucide-react';
 
 type EstimateStatusFilter = 'all' | 'draft' | 'sent' | 'approved';
 
@@ -20,6 +21,8 @@ const statusBadgeVariant = (status: string): 'success' | 'warning' | 'error' | '
 export const EstimateList = () => {
   const navigate = useNavigate();
   const { estimates } = useEstimateStore();
+  const voiceDraftStore = useVoiceDraftStore();
+  const incompleteDrafts = voiceDraftStore.getIncompleteDrafts();
 
   const [statusFilter, setStatusFilter] = useState<EstimateStatusFilter>('all');
 
@@ -90,9 +93,63 @@ export const EstimateList = () => {
         </div>
       </div>
 
+      {/* Voice Drafts In Progress */}
+      {incompleteDrafts.length > 0 && (
+        <div className="px-5 pb-2">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <Mic size={12} /> Voice Drafts In Progress
+          </p>
+          <div className="space-y-2">
+            {incompleteDrafts.map((draft) => {
+              const pct = voiceDraftStore.getCompletionPercent(draft.id);
+              return (
+                <Card
+                  key={draft.id}
+                  clickable
+                  onClick={() => navigate('/voice-estimate')}
+                  className="p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-white text-base truncate">
+                          {draft.customerName || 'Unnamed Estimate'}
+                        </h3>
+                        <Badge variant="warning" size="sm">{pct}% done</Badge>
+                      </div>
+                      {draft.propertyAddress && (
+                        <p className="text-sm text-slate-400 mb-1 truncate">{draft.propertyAddress}</p>
+                      )}
+                      <p className="text-xs text-slate-500">{draft.conversationHistory.length} voice messages</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      {draft.estimateTotal != null && draft.estimateTotal > 0 ? (
+                        <>
+                          <p className="text-xl font-bold text-white">{fmt(draft.estimateTotal)}</p>
+                          <p className="text-xs text-slate-600">est.</p>
+                        </>
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                          <Mic size={18} className="text-blue-400" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* Mini progress bar */}
+                  <div className="mt-2 h-1 rounded-full bg-slate-800 overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" style={{ width: `${pct}%` }} />
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Estimate List */}
       <div className="px-5 py-4 pb-28">
         {sortedEstimates.length === 0 ? (
+          incompleteDrafts.length > 0 ? null : (
           <EmptyState
             icon="📊"
             title={estimates.length === 0 ? 'No estimates yet' : 'No estimates found'}
@@ -107,6 +164,7 @@ export const EstimateList = () => {
                 : undefined
             }
           />
+          )
         ) : (
           <div className="space-y-3">
             {sortedEstimates.map((estimate, i) => (
