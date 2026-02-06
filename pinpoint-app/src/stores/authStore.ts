@@ -105,7 +105,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       checkAuth: async () => {
-        const { accessToken, refreshToken } = get();
+        const { accessToken } = get();
         
         if (!accessToken) {
           // Try to refresh

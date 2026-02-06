@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useEstimateStore, MaterialItem, LaborItem, materialPresets } from '../stores/estimateStore';
+import { useEstimateStore, type MaterialItem, type LaborItem, materialPresets } from '../stores/estimateStore';
 import { useCustomerStore } from '../stores/customerStore';
-import { ChevronLeft, Plus, Trash2, Save, Calculator, FileText } from 'lucide-react';
+import { ChevronLeft, Plus, Save, FileText } from 'lucide-react';
 
 export const EstimateBuilder = () => {
   const navigate = useNavigate();

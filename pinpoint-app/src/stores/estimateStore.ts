@@ -165,7 +165,7 @@ export const useEstimateStore = create<EstimateState>()(
             return get().recalculateTotals(updated);
           });
           
-          const updatedCurrent = state.currentEstimate?.id === id 
+          const updatedCurrent = state.currentEstimate?.id === estimateId 
             ? updatedEstimates.find(e => e.id === estimateId) || null
             : state.currentEstimate;
           

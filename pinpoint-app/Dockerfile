@@ -1,19 +1,14 @@
-# Frontend Dockerfile for development
-FROM node:20-alpine
+# Frontend Dockerfile - uses pre-built local dist
+FROM nginx:alpine
 
-WORKDIR /app
+# Copy custom nginx config for React Router
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy package files
-COPY package*.json ./
+# Copy pre-built assets from local dist folder
+COPY dist /usr/share/nginx/html
 
-# Install dependencies
-RUN npm install
+# Expose port
+EXPOSE 80
 
-# Copy source code
-COPY . .
-
-# Expose Vite dev server port
-EXPOSE 5173
-
-# Start development server with host flag for Docker
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

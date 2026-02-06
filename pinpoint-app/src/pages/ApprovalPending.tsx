@@ -1,5 +1,5 @@
 import { useAuthStore } from '../stores/authStore';
-import { Clock, CheckCircle, LogOut, Mail } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
 export const ApprovalPending = () => {
   const { user, logout } = useAuthStore();

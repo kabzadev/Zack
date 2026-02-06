@@ -1,22 +1,18 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCustomerStore, CustomerFilters, CustomerType, CustomerStatus } from '../stores/customerStore';
-import { 
-  Search, Plus, Filter, ChevronLeft, Phone, Mail, MapPin, 
-  Tag, MoreVertical, User, Building, Home, Briefcase 
-} from 'lucide-react';
+import { useCustomerStore, type CustomerFilters, type CustomerType, type CustomerStatus } from '../stores/customerStore';
 
-const typeColors: Record<CustomerType, { bg: string; text: string; icon: React.ReactNode }> = {
-  'homeowner': { bg: 'bg-blue-100', text: 'text-blue-700', icon: <Home size={14} /> },
-  'contractor': { bg: 'bg-purple-100', text: 'text-purple-700', icon: <Briefcase size={14} /> },
-  'property-manager': { bg: 'bg-green-100', text: 'text-green-700', icon: <Building size={14} /> },
-  'commercial': { bg: 'bg-orange-100', text: 'text-orange-700', icon: <Building size={14} /> }
+const typeConfig: Record<CustomerType, { emoji: string; label: string; gradient: string }> = {
+  'homeowner': { emoji: '🏠', label: 'Homeowner', gradient: 'from-blue-500/20 to-cyan-500/20' },
+  'contractor': { emoji: '🔨', label: 'Contractor', gradient: 'from-orange-500/20 to-amber-500/20' },
+  'property-manager': { emoji: '🏢', label: 'Property Mgr', gradient: 'from-purple-500/20 to-pink-500/20' },
+  'commercial': { emoji: '🏬', label: 'Commercial', gradient: 'from-green-500/20 to-emerald-500/20' }
 };
 
-const statusColors: Record<CustomerStatus, string> = {
-  'active': 'bg-green-500',
-  'inactive': 'bg-gray-400',
-  'prospect': 'bg-amber-500'
+const statusConfig: Record<CustomerStatus, { dot: string; label: string }> = {
+  'active': { dot: 'bg-green-500', label: 'Active' },
+  'inactive': { dot: 'bg-slate-500', label: 'Inactive' },
+  'prospect': { dot: 'bg-amber-500', label: 'Prospect' }
 };
 
 export const CustomerList = () => {
@@ -44,167 +40,244 @@ export const CustomerList = () => {
     }));
   };
 
+  const clearFilters = () => {
+    setFilters({ type: 'all', status: 'all', tags: [] });
+    setSearch('');
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-950 pb-24">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
+      <header className="app-header px-5 py-4 sticky top-0 z-50">
         <div className="flex items-center gap-3 mb-4">
           <button 
             onClick={() => navigate('/')}
-            className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+            className="w-10 h-10 rounded-xl bg-slate-800/50 text-slate-400 hover:text-white hover:bg-slate-800 transition-all flex items-center justify-center"
           >
-            <ChevronLeft size={24} />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
-          <h1 className="text-xl font-bold text-gray-900">Customers</h1>
-          <span className="ml-auto text-sm text-gray-500">
-            {filteredCustomers.length} total
+          <div className="flex-1">
+            <h1 className="font-bold text-white text-xl">Customers</h1>
+          </div>
+          <span className="text-sm text-slate-400">
+            {filteredCustomers.length}
           </span>
         </div>
 
         {/* Search Bar */}
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
             <input
               type="text"
               placeholder="Search customers..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-gray-100 border-0 rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-pinpoint-blue outline-none"
+              className="input-field pl-12"
             />
+            {search && (
+              <button 
+                onClick={() => setSearch('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`p-3 rounded-xl transition-colors ${showFilters ? 'bg-pinpoint-navy text-white' : 'bg-gray-100 text-gray-600'}`}
+            className={`w-12 h-12 rounded-xl transition-all flex items-center justify-center ${
+              showFilters 
+                ? 'bg-blue-500 text-white shadow-glow' 
+                : 'bg-slate-800/50 text-slate-400 hover:text-white'
+            }`}
           >
-            <Filter size={20} />
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
           </button>
         </div>
       </header>
 
-      {/* Filters */}
+      {/* Filters Panel */}
       {showFilters && (
-        <div className="bg-white border-b border-gray-200 px-4 py-4 space-y-4">
+        <div className="bg-slate-900/50 backdrop-blur-xl border-b border-slate-800/50 px-5 py-4 space-y-4 animate-fade-in-up">
           {/* Type Filter */}
           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">Customer Type</label>
+            <label className="section-title mb-3 block">Customer Type</label>
             <div className="flex flex-wrap gap-2">
-              {['all', 'homeowner', 'contractor', 'property-manager', 'commercial'].map((type) => (
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, type: 'all' }))}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  filters.type === 'all'
+                    ? 'bg-white text-slate-900'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                }`}
+              >
+                All Types
+              </button>
+              {(['homeowner', 'contractor', 'property-manager', 'commercial'] as CustomerType[]).map((type) => (
                 <button
                   key={type}
-                  onClick={() => setFilters(prev => ({ ...prev, type: type as any }))}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  onClick={() => setFilters(prev => ({ ...prev, type }))}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
                     filters.type === type
-                      ? 'bg-pinpoint-navy text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-white text-slate-900'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                   }`}
                 >
-                  {type === 'all' ? 'All Types' : type.replace('-', ' ')}
+                  <span>{typeConfig[type].emoji}</span>
+                  <span>{typeConfig[type].label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Status Filter */}
+          <div>
+            <label className="section-title mb-3 block">Status</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFilters(prev => ({ ...prev, status: 'all' }))}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  filters.status === 'all'
+                    ? 'bg-white text-slate-900'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                }`}
+              >
+                All Status
+              </button>
+              {(['active', 'inactive', 'prospect'] as CustomerStatus[]).map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilters(prev => ({ ...prev, status }))}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                    filters.status === status
+                      ? 'bg-white text-slate-900'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${statusConfig[status].dot}`}></span>
+                  <span>{statusConfig[status].label}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Tags Filter */}
-          <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">Tags</label>
-            <div className="flex flex-wrap gap-2">
-              {tags.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => toggleTag(tag)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                    filters.tags?.includes(tag)
-                      ? 'bg-pinpoint-blue text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
+          {tags.length > 0 && (
+            <div>
+              <label className="section-title mb-3 block">Tags</label>
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      filters.tags?.includes(tag)
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    #{tag}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Clear Filters */}
+          <button 
+            onClick={clearFilters}
+            className="w-full py-3 text-center text-sm text-slate-400 hover:text-white transition-colors border-t border-slate-800/50 pt-4"
+          >
+            Clear all filters
+          </button>
         </div>
       )}
 
       {/* Customer List */}
-      <div className="p-4">
+      <div className="p-5">
         {filteredCustomers.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="text-gray-400" size={32} />
+          <div className="text-center py-16">
+            <div className="w-20 h-20 bg-slate-800/50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <span className="text-4xl">🔍</span>
             </div>
-            <p className="text-gray-500 mb-2">No customers found</p>
-            <p className="text-sm text-gray-400">Try adjusting your search or filters</p>
+            <p className="text-lg font-medium text-white mb-2">No customers found</p>
+            <p className="text-sm text-slate-400 mb-6">Try adjusting your search or filters</p>
+            <button 
+              onClick={clearFilters}
+              className="btn-secondary"
+            >
+              Clear filters
+            </button>
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredCustomers.map((customer) => {
-              const typeStyle = typeColors[customer.type];
+            {filteredCustomers.map((customer, index) => {
+              const type = typeConfig[customer.type];
+              const status = statusConfig[customer.status];
               return (
                 <div 
                   key={customer.id}
-                  className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => navigate(`/customers/${customer.id}`)}
+                  className="app-card app-card-hover flex items-center gap-4 cursor-pointer animate-fade-in-up"
+                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900">
-                          {customer.firstName} {customer.lastName}
-                        </h3>
-                        <span className={`w-2 h-2 rounded-full ${statusColors[customer.status]}`} />
-                      </div>
-                      
-                      <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 ${typeStyle.bg} ${typeStyle.text}`}>
-                          {typeStyle.icon}
-                          {customer.type.replace('-', ' ')}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1 text-sm">
-                        {customer.phone && (
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Phone size={14} className="text-gray-400" />
-                            <span>{customer.phone}</span>
-                          </div>
-                        )}
-                        {customer.email && (
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <Mail size={14} className="text-gray-400" />
-                            <span>{customer.email}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <MapPin size={14} className="text-gray-400" />
-                          <span>{customer.city}, {customer.state}</span>
-                        </div>
-                      </div>
-
-                      {customer.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-3">
-                          {customer.tags.slice(0, 3).map((tag) => (
-                            <span key={tag} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">
-                              {tag}
-                            </span>
-                          ))}
-                          {customer.tags.length > 3 && (
-                            <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">
-                              +{customer.tags.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-pinpoint-navy">
-                        {customer.estimateCount}
-                      </div>
-                      <div className="text-xs text-gray-500">estimates</div>
-                    </div>
+                  {/* Avatar */}
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${type.gradient} flex items-center justify-center flex-shrink-0`}>
+                    <span className="text-2xl">{type.emoji}</span>
                   </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-white truncate">
+                        {customer.firstName} {customer.lastName}
+                      </h3>
+                      <span className={`w-2 h-2 rounded-full ${status.dot} flex-shrink-0`} />
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-sm text-slate-400">
+                      <span className="text-slate-500">{type.label}</span>
+                      <span className="text-slate-700">•</span>
+                      <span className="truncate">{customer.city}</span>
+                    </div>
+
+                    {customer.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {customer.tags.slice(0, 2).map((tag) => (
+                          <span key={tag} className="px-2 py-0.5 bg-slate-800 text-slate-400 text-xs rounded-full">
+                            #{tag}
+                          </span>
+                        ))}
+                        {customer.tags.length > 2 && (
+                          <span className="px-2 py-0.5 bg-slate-800 text-slate-500 text-xs rounded-full">
+                            +{customer.tags.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Stats */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-2xl font-bold text-white">{customer.estimateCount}</p>
+                    <p className="text-xs text-slate-500">estimates</p>
+                  </div>
+
+                  {/* Arrow */}
+                  <svg className="w-5 h-5 text-slate-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
               );
             })}
@@ -215,9 +288,11 @@ export const CustomerList = () => {
       {/* Add Button */}
       <button
         onClick={() => navigate('/customers/new')}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-pinpoint-navy text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center"
+        className="fab fixed bottom-6 right-6 z-50"
       >
-        <Plus size={28} />
+        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
       </button>
     </div>
   );

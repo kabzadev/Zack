@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerStore } from '../stores/customerStore';
-import { ChevronLeft, Plus, X } from 'lucide-react';
+import { ChevronLeft, Plus } from 'lucide-react';
 
 export const NewCustomer = () => {
   const navigate = useNavigate();

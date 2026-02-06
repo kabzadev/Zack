@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useCustomerStore } from '../stores/customerStore';
 import { 
   ChevronLeft, Phone, Mail, MapPin, FileText, 
-  Edit2, Trash2, Tag, Plus, X
+  Edit2, Trash2, Plus, X
 } from 'lucide-react';
 
 export const CustomerDetail = () => {

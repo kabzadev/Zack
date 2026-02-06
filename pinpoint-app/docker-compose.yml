@@ -47,24 +47,17 @@ services:
       - /app/node_modules
     command: npm run dev
 
-  # Frontend
+  # Frontend (Production)
   frontend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: pinpoint-frontend
-    environment:
-      VITE_API_URL: http://100.88.213.43:3001/api
     ports:
-      - "5173:5173"
-      - "0.0.0.0:5173:5173"
-    volumes:
-      - ./src:/app/src
-      - ./public:/app/public
-      - /app/node_modules
+      - "5173:80"
+      - "0.0.0.0:5173:80"
     depends_on:
       - backend
-    command: npm run dev -- --host 0.0.0.0
 
 volumes:
   postgres_data:
