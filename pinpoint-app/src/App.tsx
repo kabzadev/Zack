@@ -15,6 +15,7 @@ import { AdminPanel } from './pages/AdminPanel';
 import { AdminUserManagement } from './pages/AdminUserManagement';
 import { Settings } from './pages/Settings';
 import { EstimateList } from './pages/EstimateList';
+import { FloatingAssistant } from './components/FloatingAssistant';
 import { useAuthStore } from './stores/authStore';
 import { useEffect, useState } from 'react';
 import './App.css';
@@ -156,6 +157,11 @@ function AppContent() {
           <Route path="*" element={<Navigate to={fallbackPath} replace />} />
         </Routes>
       </div>
+      
+      {/* Floating assistant — always available on authenticated pages */}
+      {effectiveAuthenticated && effectiveUser?.status === 'approved' && (
+        <FloatingAssistant />
+      )}
     </div>
   );
 }
