@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/authStore';
 import { useCustomerStore } from '../stores/customerStore';
 import { useEstimateStore } from '../stores/estimateStore';
 import { Layout, Card, StatCard, Badge } from '../components';
-import { Users, FileText, DollarSign, UserCheck, Plus, Mic, Camera, ChevronRight, LogOut, ShoppingBag } from 'lucide-react';
+import { Users, FileText, DollarSign, UserCheck, Plus, Mic, Camera, ChevronRight, LogOut, ShoppingBag, Palette } from 'lucide-react';
 
 export const Dashboard = () => {
   const navigate = useNavigate();
@@ -109,6 +109,19 @@ export const Dashboard = () => {
                 <div className="flex-1">
                   <p className="font-semibold text-white">SW Products</p>
                   <p className="text-sm text-slate-400">Paint catalog, tiers & pricing</p>
+                </div>
+                <ChevronRight size={20} className="text-slate-600" />
+              </div>
+            </Card>
+
+            <Card variant="clickable" onClick={() => navigate('/colors')}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                  <Palette size={22} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-white">SW Color Wheel</p>
+                  <p className="text-sm text-slate-400">Browse 1,500+ Sherwin-Williams colors</p>
                 </div>
                 <ChevronRight size={20} className="text-slate-600" />
               </div>
