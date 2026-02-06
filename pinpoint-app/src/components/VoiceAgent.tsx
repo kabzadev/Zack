@@ -3,6 +3,7 @@ import { useConversation } from '@elevenlabs/react';
 import { Mic, MicOff, X, Volume2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useVoiceDraftStore, type VoiceConversationEntry, type VoiceDraft } from '../stores/voiceDraftStore';
 import { useCustomerStore } from '../stores/customerStore';
+import { useBusinessConfigStore } from '../stores/businessConfigStore';
 
 export interface VoiceEstimateData {
   draft: VoiceDraft;
@@ -37,6 +38,9 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
   customerStoreRef.current = customerStore;
   const storeRef = useRef(store);
   storeRef.current = store;
+  const bizConfig = useBusinessConfigStore();
+  const bizConfigRef = useRef(bizConfig);
+  bizConfigRef.current = bizConfig;
 
   useEffect(() => { transcriptRef.current = transcript; }, [transcript]);
 
@@ -395,14 +399,48 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
     }
   }, [store]);
 
-  // Stable ref for lookup tool
+  // Get business config for the agent
+  const getBusinessConfig = useCallback(async () => {
+    const cfg = bizConfigRef.current;
+    const defaultRate = cfg.getDefaultRate();
+    const draftId = currentDraftIdRef.current;
+
+    // Auto-fill defaults into draft
+    if (draftId && defaultRate) {
+      storeRef.current.updateDraftFields(draftId, {
+        hourlyRate: defaultRate.rate,
+        hoursPerDay: cfg.defaultHoursPerDay,
+        materialMarkupPercent: cfg.defaultMarkupPercent,
+        taxRate: cfg.defaultTaxRate,
+      });
+    }
+
+    return JSON.stringify({
+      defaultRate: defaultRate ? { label: defaultRate.label, rate: defaultRate.rate } : null,
+      allRates: cfg.hourlyRates.map(r => ({ label: r.label, rate: r.rate, isDefault: r.isDefault })),
+      oneOffCosts: cfg.oneOffCosts.map(c => ({ label: c.label, cost: c.cost })),
+      markupPercent: cfg.defaultMarkupPercent,
+      taxRate: cfg.defaultTaxRate,
+      hoursPerDay: cfg.defaultHoursPerDay,
+      message: defaultRate
+        ? `Default rate is $${defaultRate.rate}/hr (${defaultRate.label}). ${cfg.hourlyRates.length > 1 ? `Other rates: ${cfg.hourlyRates.filter(r => !r.isDefault).map(r => `${r.label} $${r.rate}/hr`).join(', ')}.` : ''} Do NOT ask about the hourly rate — it's already set. Move on to the next question.`
+        : 'No rates configured. Ask the user for their hourly rate.',
+    });
+  }, []);
+
+  // Stable refs for tools
   const lookupCustomerRef = useRef(lookupCustomer);
   lookupCustomerRef.current = lookupCustomer;
+  const getBusinessConfigRef = useRef(getBusinessConfig);
+  getBusinessConfigRef.current = getBusinessConfig;
 
   const clientTools = useRef({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     lookup_customer: async (params: any) => {
       return lookupCustomerRef.current(params);
+    },
+    get_business_config: async () => {
+      return getBusinessConfigRef.current();
     },
   }).current;
 

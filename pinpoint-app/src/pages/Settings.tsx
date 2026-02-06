@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout, Card, Button, Input, Badge } from '../components';
 import { useAuthStore } from '../stores/authStore';
+import { useBusinessConfigStore } from '../stores/businessConfigStore';
 import {
   User,
   Building2,
@@ -13,6 +14,13 @@ import {
   MapPin,
   Save,
   Check,
+  DollarSign,
+  Plus,
+  Trash2,
+  Star,
+  Percent,
+  Clock,
+  Wrench,
 } from 'lucide-react';
 
 export const Settings = () => {
@@ -23,6 +31,13 @@ export const Settings = () => {
   const [profileName, setProfileName] = useState(user?.name || '');
   const [profilePhone] = useState(user?.phoneNumber || '');
   const [profileSaved, setProfileSaved] = useState(false);
+
+  /* Business config */
+  const bizConfig = useBusinessConfigStore();
+  const [newRateLabel, setNewRateLabel] = useState('');
+  const [newRateValue, setNewRateValue] = useState('');
+  const [newCostLabel, setNewCostLabel] = useState('');
+  const [newCostValue, setNewCostValue] = useState('');
 
   /* Company form */
   const [companyName, setCompanyName] = useState(
@@ -138,6 +153,187 @@ export const Settings = () => {
             >
               {companySaved ? 'Saved!' : 'Save Company Info'}
             </Button>
+          </div>
+        </Card>
+
+        {/* Hourly Rates */}
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center">
+              <DollarSign size={20} className="text-green-400" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-sm font-semibold text-white uppercase tracking-wide">Hourly Rates</h2>
+              <p className="text-xs text-slate-500">Used by voice estimator for labor calculations</p>
+            </div>
+          </div>
+
+          <div className="space-y-2 mb-4">
+            {bizConfig.hourlyRates.map(rate => (
+              <div key={rate.id} className="flex items-center gap-2 p-3 rounded-xl bg-slate-800/40 border border-slate-700/30">
+                <button
+                  onClick={() => bizConfig.setDefaultRate(rate.id)}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
+                    rate.isDefault ? 'bg-green-500/20 text-green-400' : 'bg-slate-700/50 text-slate-600 hover:text-slate-400'
+                  }`}
+                  title={rate.isDefault ? 'Default rate' : 'Set as default'}
+                >
+                  <Star size={12} fill={rate.isDefault ? 'currentColor' : 'none'} />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium truncate">{rate.label}</p>
+                  {rate.isDefault && <span className="text-[10px] text-green-400">Default</span>}
+                </div>
+                <span className="text-sm font-bold text-green-400">${rate.rate}/hr</span>
+                <button
+                  onClick={() => bizConfig.removeRate(rate.id)}
+                  className="p-1.5 text-slate-600 hover:text-red-400 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add new rate */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Label"
+              value={newRateLabel}
+              onChange={e => setNewRateLabel(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/50 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-green-500/50"
+            />
+            <input
+              type="number"
+              placeholder="$/hr"
+              value={newRateValue}
+              onChange={e => setNewRateValue(e.target.value)}
+              className="w-20 px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/50 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-green-500/50"
+            />
+            <button
+              onClick={() => {
+                if (newRateLabel.trim() && newRateValue) {
+                  bizConfig.addRate(newRateLabel.trim(), parseFloat(newRateValue));
+                  setNewRateLabel('');
+                  setNewRateValue('');
+                }
+              }}
+              disabled={!newRateLabel.trim() || !newRateValue}
+              className="px-3 py-2 rounded-xl bg-green-500/20 text-green-400 hover:bg-green-500/30 disabled:opacity-30 transition-all"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
+        </Card>
+
+        {/* One-Off Costs */}
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center">
+              <Wrench size={20} className="text-amber-400" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-sm font-semibold text-white uppercase tracking-wide">One-Off Costs</h2>
+              <p className="text-xs text-slate-500">Add-on services with flat pricing</p>
+            </div>
+          </div>
+
+          <div className="space-y-2 mb-4">
+            {bizConfig.oneOffCosts.map(cost => (
+              <div key={cost.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-slate-700/30">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium truncate">{cost.label}</p>
+                </div>
+                <span className="text-sm font-bold text-amber-400">${cost.cost}</span>
+                <button
+                  onClick={() => bizConfig.removeCost(cost.id)}
+                  className="p-1.5 text-slate-600 hover:text-red-400 transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Add new cost */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Service name"
+              value={newCostLabel}
+              onChange={e => setNewCostLabel(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/50 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50"
+            />
+            <input
+              type="number"
+              placeholder="$"
+              value={newCostValue}
+              onChange={e => setNewCostValue(e.target.value)}
+              className="w-20 px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/50 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50"
+            />
+            <button
+              onClick={() => {
+                if (newCostLabel.trim() && newCostValue) {
+                  bizConfig.addCost(newCostLabel.trim(), parseFloat(newCostValue));
+                  setNewCostLabel('');
+                  setNewCostValue('');
+                }
+              }}
+              disabled={!newCostLabel.trim() || !newCostValue}
+              className="px-3 py-2 rounded-xl bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 disabled:opacity-30 transition-all"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
+        </Card>
+
+        {/* Estimate Defaults */}
+        <Card>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+              <Percent size={20} className="text-purple-400" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white uppercase tracking-wide">Estimate Defaults</h2>
+              <p className="text-xs text-slate-500">Markup, tax, and work day settings</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-slate-400 w-32">Material Markup</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={bizConfig.defaultMarkupPercent}
+                  onChange={e => bizConfig.setMarkup(parseFloat(e.target.value) || 0)}
+                  className="w-20 px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/50 text-white text-sm focus:outline-none focus:border-purple-500/50"
+                />
+                <span className="text-sm text-slate-500">%</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-slate-400 w-32">Tax Rate</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={bizConfig.defaultTaxRate}
+                  onChange={e => bizConfig.setTaxRate(parseFloat(e.target.value) || 0)}
+                  className="w-20 px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/50 text-white text-sm focus:outline-none focus:border-purple-500/50"
+                />
+                <span className="text-sm text-slate-500">%</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-slate-400 w-32 flex items-center gap-1"><Clock size={14} /> Hours/Day</label>
+              <input
+                type="number"
+                value={bizConfig.defaultHoursPerDay}
+                onChange={e => bizConfig.setHoursPerDay(parseFloat(e.target.value) || 8)}
+                className="w-20 px-3 py-2 rounded-xl bg-slate-800/80 border border-slate-700/50 text-white text-sm focus:outline-none focus:border-purple-500/50"
+              />
+            </div>
           </div>
         </Card>
 
