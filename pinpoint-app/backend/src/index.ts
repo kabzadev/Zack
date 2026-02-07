@@ -9,6 +9,8 @@ import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
 import geminiRoutes from './routes/gemini';
 import photosRoutes from './routes/photos';
+import customerRoutes from './routes/customers';
+import estimateRoutes from './routes/estimates';
 
 dotenv.config();
 
@@ -73,6 +75,8 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/gemini', geminiRoutes);
 app.use('/api/photos', photosRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/estimates', estimateRoutes);
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

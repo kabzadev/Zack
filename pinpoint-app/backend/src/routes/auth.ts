@@ -15,6 +15,11 @@ router.post('/request-otp', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Phone number required' });
     }
 
+    // Test bypass for Keith's specific test number - don't actually send SMS
+    if (phoneNumber === '7275551212') {
+      return res.json({ success: true, message: 'OTP sent successfully (Test Bypass)' });
+    }
+
     const sent = await sendOTP(phoneNumber);
 
     if (!sent) {
@@ -38,7 +43,21 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
     }
 
     // Verify OTP with Twilio
-    const isValid = await verifyOTP(phoneNumber, code);
+    let isValid = false;
+    
+    // Normalize phone for comparison
+    const cleanPhone = phoneNumber.replace(/\D/g, '');
+    const isTestNumber = cleanPhone === '7275551212' || cleanPhone === '17275551212';
+    
+    console.log(`Verifying OTP for ${phoneNumber} (Clean: ${cleanPhone}, Test: ${isTestNumber})`);
+    
+    // Test bypass for Keith's specific test number
+    if (isTestNumber && code === '000000') {
+      console.log('Test bypass triggered for Keith');
+      isValid = true;
+    } else {
+      isValid = await verifyOTP(phoneNumber, code);
+    }
 
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid or expired code' });
