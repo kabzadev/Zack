@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import { initSecrets } from './config/secrets';
 import { initDatabase } from './config/database';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
@@ -87,6 +88,9 @@ app.use((req, res) => {
 // Start server
 const startServer = async () => {
   try {
+    // Initialize secrets from Key Vault
+    await initSecrets();
+
     // Initialize database
     await initDatabase();
     console.log('Database initialized');

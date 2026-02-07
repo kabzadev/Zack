@@ -78,6 +78,16 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       return JSON.stringify({ found: false, message: `No customer found matching "${searchName}". Ask for their full name and details to create a new customer.` });
     }
 
+    if (results.length > 1) {
+      const matchNames = results.slice(0, 5).map(r => `${r.firstName} ${r.lastName}`).join(', ');
+      return JSON.stringify({
+        found: false,
+        multiple_matches: true,
+        matches: results.map(r => ({ name: `${r.firstName} ${r.lastName}`, id: r.id })),
+        message: `I found ${results.length} matches: ${matchNames}. Ask the user to clarify which one it is.`
+      });
+    }
+
     const customer = results[0];
     const fullName = `${customer.firstName} ${customer.lastName}`;
     const fullAddress = [customer.address, customer.city, customer.state, customer.zipCode].filter(Boolean).join(', ');
@@ -169,6 +179,9 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
           // Trigger the lookup_customer tool programmatically
           try {
             await lookupCustomerRef.current({ name: lookupName });
+            // If the lookup was successful (handled inside the tool), 
+            // the store is updated and we should not proceed with regex
+            return; 
           } catch {
             // If lookup fails, still set the name
             const titleCased = lookupName.replace(/\b[a-z]/g, c => c.toUpperCase());
@@ -177,9 +190,9 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
         }
       }
 
-      // Only proceed with regex extraction if lookup didn't set it
+      // Only proceed with regex extraction if lookup didn't set it and no lookup was attempted
       const refreshedDraft = storeRef.current.getDraftById(dId);
-      if (!refreshedDraft?.customerName && !updates.customerName) {
+      if (!refreshedDraft?.customerName && !updates.customerName && !existingCustomerMatch) {
         const namePatterns = [
           /(?:for|customer(?:\s+is)?|name(?:\s+is)?|this is for|estimate for|it'?s for)\s+(?:the\s+)?(?:(?:my\s+)?existing\s+customer\s+)?([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
           /(?:got it|okay|perfect),?\s+([a-z][a-z'-]+(?:\s+[a-z][a-z'-]+){0,2})/i,
@@ -193,6 +206,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
           'estimate', 'project', 'house', 'home', 'looking', 'going', 'doing',
           'getting', 'ready', 'here', 'there', 'good', 'great', 'fine',
           'my', 'existing', 'current', 'customer', 'already',
+          'him', 'her', 'them', 'me', 'you', 'it', 'us', 'they', 'someone', 'person',
         ]);
         for (const pat of namePatterns) {
           const m = allText.match(pat);
@@ -663,7 +677,7 @@ export const VoiceAgent: React.FC<VoiceAgentProps> = ({
       // Detect when the agent signals the estimate is complete
       if (role === 'agent') {
         const lower = props.message.toLowerCase();
-        const doneSignals = ['that covers everything', 'estimate is complete', 'all set', 'we have everything', 'that wraps it up', 'thats everything'];
+        const doneSignals = ['estimate is complete', 'all set', 'we have everything', 'thats everything'];
         if (doneSignals.some(s => lower.includes(s))) {
           // Auto-end the call after a brief delay to let the agent finish speaking
           setTimeout(async () => {

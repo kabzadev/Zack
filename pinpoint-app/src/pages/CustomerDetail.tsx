@@ -114,12 +114,34 @@ export const CustomerDetail = () => {
   );
 
   return (
-    <Layout showBack title={`${customer.firstName} ${customer.lastName}`} headerActions={headerActions}>
+    <Layout showBack title="Customer Details" headerActions={headerActions}>
       <div className="px-5 py-4 space-y-4 pb-8">
+        {/* Customer Identity */}
+        <div className="pt-2 pb-1">
+          {isEditing ? (
+            <div className="flex gap-3">
+              <Input
+                value={display.firstName}
+                onChange={e => setEdited(p => (p ? { ...p, firstName: e.target.value } : p))}
+                placeholder="First Name"
+              />
+              <Input
+                value={display.lastName}
+                onChange={e => setEdited(p => (p ? { ...p, lastName: e.target.value } : p))}
+                placeholder="Last Name"
+              />
+            </div>
+          ) : (
+            <h1 className="text-3xl font-bold text-white tracking-tight">
+              {customer.firstName} {customer.lastName}
+            </h1>
+          )}
+        </div>
+
         {/* Type & Status */}
-        <div className="flex items-center gap-3 py-2">
-          <span className="text-3xl">{type.emoji}</span>
-          <span className="text-slate-300 font-medium text-lg">{type.label}</span>
+        <div className="flex items-center gap-3 py-1">
+          <span className="text-2xl">{type.emoji}</span>
+          <span className="text-slate-400 font-medium">{type.label}</span>
           <div className="ml-auto">
             <Badge
               variant={
