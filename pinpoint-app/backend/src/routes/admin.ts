@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import db from '../config/database';
+import { query, queryOne, run } from '../config/database';
 import { formatPhoneDisplay } from '../utils/twilio';
 import { verifyAccessToken, TokenPayload } from '../utils/jwt';
 
@@ -36,9 +36,9 @@ router.get('/users', requireAdmin, async (req: Request, res: Response) => {
     const { status } = req.query;
     let rows: any[];
     if (status) {
-      rows = db.prepare('SELECT * FROM users WHERE status = ? ORDER BY created_at DESC').all(status);
+      rows = await query('SELECT * FROM users WHERE status = ? ORDER BY created_at DESC', [status]);
     } else {
-      rows = db.prepare('SELECT * FROM users ORDER BY created_at DESC').all();
+      rows = await query('SELECT * FROM users ORDER BY created_at DESC');
     }
     const users = rows.map((user: any) => ({
       id: user.id,
@@ -62,8 +62,8 @@ router.get('/users', requireAdmin, async (req: Request, res: Response) => {
 
 router.get('/users/pending', requireAdmin, async (req: Request, res: Response) => {
   try {
-    const rows = db.prepare("SELECT * FROM users WHERE status = 'pending' ORDER BY requested_at DESC").all() as any[];
-    const users = rows.map((user) => ({
+    const rows = await query("SELECT * FROM users WHERE status = 'pending' ORDER BY requested_at DESC");
+    const users = rows.map((user: any) => ({
       id: user.id,
       phoneNumber: formatPhoneDisplay(user.phone_number),
       rawPhoneNumber: user.phone_number,
@@ -81,13 +81,14 @@ router.post('/users/:id/approve', requireAdmin, async (req: Request, res: Respon
   try {
     const { id } = req.params;
     const adminId = req.user?.userId;
-    const result = db.prepare(
-      "UPDATE users SET status = 'approved', approved_at = datetime('now'), approved_by = ? WHERE id = ? AND status = 'pending'"
-    ).run(adminId, id);
+    const result = await run(
+      "UPDATE users SET status = 'approved', approved_at = datetime('now'), approved_by = ? WHERE id = ? AND status = 'pending'",
+      [adminId, id]
+    );
     if (result.changes === 0) {
       return res.status(404).json({ error: 'User not found or not pending' });
     }
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
+    const user = await queryOne('SELECT * FROM users WHERE id = ?', [id]);
     res.json({
       success: true,
       message: 'User approved successfully',
@@ -102,13 +103,14 @@ router.post('/users/:id/approve', requireAdmin, async (req: Request, res: Respon
 router.post('/users/:id/decline', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = db.prepare(
-      "UPDATE users SET status = 'inactive', updated_at = datetime('now') WHERE id = ? AND status = 'pending'"
-    ).run(id);
+    const result = await run(
+      "UPDATE users SET status = 'inactive', updated_at = datetime('now') WHERE id = ? AND status = 'pending'",
+      [id]
+    );
     if (result.changes === 0) {
       return res.status(404).json({ error: 'User not found or not pending' });
     }
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
+    const user = await queryOne('SELECT * FROM users WHERE id = ?', [id]);
     res.json({ success: true, message: 'User declined', user: { id: user.id, phoneNumber: formatPhoneDisplay(user.phone_number), status: user.status } });
   } catch (error) {
     console.error('Decline user error:', error);
@@ -119,13 +121,14 @@ router.post('/users/:id/decline', requireAdmin, async (req: Request, res: Respon
 router.post('/users/:id/suspend', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = db.prepare(
-      "UPDATE users SET status = 'suspended', updated_at = datetime('now') WHERE id = ? AND status = 'approved'"
-    ).run(id);
+    const result = await run(
+      "UPDATE users SET status = 'suspended', updated_at = datetime('now') WHERE id = ? AND status = 'approved'",
+      [id]
+    );
     if (result.changes === 0) {
       return res.status(404).json({ error: 'User not found or not approved' });
     }
-    db.prepare('UPDATE device_sessions SET is_active = 0 WHERE user_id = ?').run(id);
+    await run('UPDATE device_sessions SET is_active = 0 WHERE user_id = ?', [id]);
     res.json({ success: true, message: 'User suspended' });
   } catch (error) {
     console.error('Suspend user error:', error);
@@ -135,11 +138,16 @@ router.post('/users/:id/suspend', requireAdmin, async (req: Request, res: Respon
 
 router.get('/stats', requireAdmin, async (req: Request, res: Response) => {
   try {
-    const total = (db.prepare('SELECT COUNT(*) as c FROM users').get() as any).c;
-    const active = (db.prepare("SELECT COUNT(*) as c FROM users WHERE status = 'approved'").get() as any).c;
-    const pending = (db.prepare("SELECT COUNT(*) as c FROM users WHERE status = 'pending'").get() as any).c;
-    const suspended = (db.prepare("SELECT COUNT(*) as c FROM users WHERE status = 'suspended'").get() as any).c;
-    res.json({ total_users: total, active_users: active, pending_users: pending, suspended_users: suspended });
+    const totalRow = await queryOne('SELECT COUNT(*) as c FROM users');
+    const activeRow = await queryOne("SELECT COUNT(*) as c FROM users WHERE status = 'approved'");
+    const pendingRow = await queryOne("SELECT COUNT(*) as c FROM users WHERE status = 'pending'");
+    const suspendedRow = await queryOne("SELECT COUNT(*) as c FROM users WHERE status = 'suspended'");
+    res.json({
+      total_users: Number(totalRow?.c || 0),
+      active_users: Number(activeRow?.c || 0),
+      pending_users: Number(pendingRow?.c || 0),
+      suspended_users: Number(suspendedRow?.c || 0),
+    });
   } catch (error) {
     console.error('Get stats error:', error);
     res.status(500).json({ error: 'Internal server error' });

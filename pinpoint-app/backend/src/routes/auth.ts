@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import db from '../config/database';
+import { query, queryOne, run } from '../config/database';
 import { sendOTP, verifyOTP } from '../utils/twilio';
 import { generateTokens, TokenPayload } from '../utils/jwt';
 import { randomUUID } from 'crypto';
@@ -31,7 +31,7 @@ router.post('/request-otp', async (req: Request, res: Response) => {
 // Verify OTP and authenticate
 router.post('/verify-otp', async (req: Request, res: Response) => {
   try {
-    const { phoneNumber, code, deviceName, deviceType } = req.body;
+    const { phoneNumber, code, deviceName, deviceType, firstName, lastName } = req.body;
 
     if (!phoneNumber || !code) {
       return res.status(400).json({ error: 'Phone number and code required' });
@@ -45,16 +45,18 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
     }
 
     // Check if user exists
-    let user = db.prepare('SELECT * FROM users WHERE phone_number = ?').get(phoneNumber) as any;
+    let user = await queryOne('SELECT * FROM users WHERE phone_number = ?', [phoneNumber]);
     let isNewUser = false;
 
     if (!user) {
       // Create new user with pending status
       const id = randomUUID();
-      db.prepare(
-        `INSERT INTO users (id, phone_number, name, status, requested_at) VALUES (?, ?, ?, 'pending', datetime('now'))`
-      ).run(id, phoneNumber, null);
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
+      const name = [firstName, lastName].filter(Boolean).join(' ') || null;
+      await run(
+        `INSERT INTO users (id, phone_number, name, status, requested_at) VALUES (?, ?, ?, 'pending', datetime('now'))`,
+        [id, phoneNumber, name]
+      );
+      user = await queryOne('SELECT * FROM users WHERE id = ?', [id]);
       isNewUser = true;
     }
 
@@ -90,12 +92,13 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
 
     // Store device session
     const sessionId = randomUUID();
-    db.prepare(
-      `INSERT INTO device_sessions (id, user_id, device_name, device_type, refresh_token, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).run(sessionId, user.id, deviceName || 'Unknown', deviceType || 'mobile', refreshToken, req.ip, req.headers['user-agent']);
+    await run(
+      `INSERT INTO device_sessions (id, user_id, device_name, device_type, refresh_token, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [sessionId, user.id, deviceName || 'Unknown', deviceType || 'mobile', refreshToken, req.ip, req.headers['user-agent']]
+    );
 
     // Update user login stats
-    db.prepare("UPDATE users SET last_login_at = datetime('now'), login_count = login_count + 1 WHERE id = ?").run(user.id);
+    await run("UPDATE users SET last_login_at = datetime('now'), login_count = login_count + 1 WHERE id = ?", [user.id]);
 
     res.json({
       success: true,
@@ -125,13 +128,13 @@ router.post('/refresh', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Refresh token required' });
     }
 
-    const session = db.prepare('SELECT * FROM device_sessions WHERE refresh_token = ? AND is_active = 1').get(refreshToken) as any;
+    const session = await queryOne('SELECT * FROM device_sessions WHERE refresh_token = ? AND is_active = 1', [refreshToken]);
 
     if (!session) {
       return res.status(401).json({ error: 'Invalid refresh token' });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(session.user_id) as any;
+    const user = await queryOne('SELECT * FROM users WHERE id = ?', [session.user_id]);
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
@@ -146,7 +149,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
 
     const tokens = generateTokens(payload);
 
-    db.prepare("UPDATE device_sessions SET refresh_token = ?, last_active_at = datetime('now') WHERE refresh_token = ?").run(tokens.refreshToken, refreshToken);
+    await run("UPDATE device_sessions SET refresh_token = ?, last_active_at = datetime('now') WHERE refresh_token = ?", [tokens.refreshToken, refreshToken]);
 
     res.json({ tokens });
   } catch (error) {
