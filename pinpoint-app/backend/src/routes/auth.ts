@@ -149,6 +149,16 @@ router.post('/refresh', async (req: Request, res: Response) => {
 
     const tokens = generateTokens(payload);
 
+    // Enforce 7-day inactivity limit
+    const lastActive = new Date(session.last_active_at).getTime();
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+    if (now - lastActive > sevenDaysMs) {
+      await run("UPDATE device_sessions SET is_active = 0 WHERE refresh_token = ?", [refreshToken]);
+      return res.status(401).json({ error: 'Session expired due to inactivity' });
+    }
+
     await run("UPDATE device_sessions SET refresh_token = ?, last_active_at = datetime('now') WHERE refresh_token = ?", [tokens.refreshToken, refreshToken]);
 
     res.json({ tokens });
